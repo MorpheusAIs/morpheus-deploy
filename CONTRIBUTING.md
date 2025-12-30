@@ -382,7 +382,7 @@ Releases are managed by maintainers:
 
 ## Getting Help
 
-- **Discord**: [Join our community](https://discord.gg/morpheus)
+- **Discord**: [Join our community](https://discord.gg/kyVaxTHnvB)
 - **GitHub Discussions**: Ask questions
 - **Issues**: Report bugs or request features
 
