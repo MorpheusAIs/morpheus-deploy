@@ -1,10 +1,12 @@
+import { existsSync } from 'fs';
+import { writeFile, mkdir } from 'fs/promises';
+
+import chalk from 'chalk';
 import inquirer from 'inquirer';
 import ora from 'ora';
-import chalk from 'chalk';
-import { writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import { WalletManager } from '../lib/wallet.js';
+
 import { generateMorpheusConfig } from '../lib/config.js';
+import { WalletManager } from '../lib/wallet.js';
 
 interface InitOptions {
   template: string;
@@ -49,7 +51,9 @@ export async function initCommand(options: InitOptions): Promise<void> {
       message: 'Project name:',
       default: process.cwd().split('/').pop(),
       validate: (input: string) => {
-        if (!input.trim()) return 'Project name is required';
+        if (!input.trim()) {
+          return 'Project name is required';
+        }
         if (!/^[a-z0-9-]+$/.test(input)) {
           return 'Project name must be lowercase alphanumeric with hyphens only';
         }

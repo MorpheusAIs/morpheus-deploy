@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import { initCommand } from './commands/init.js';
+
 import { deployCommand } from './commands/deploy.js';
+import { fundCommand } from './commands/fund.js';
+import { initCommand } from './commands/init.js';
 import { logsCommand } from './commands/logs.js';
 import { statusCommand } from './commands/status.js';
-import { fundCommand } from './commands/fund.js';
 
 const program = new Command();
 
