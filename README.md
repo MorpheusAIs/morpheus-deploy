@@ -1,6 +1,6 @@
 # Morpheus Deploy
 
-**The Vercel for Akash: Decentralized Deployment Platform for AI Agents**
+**The Vercel for DePin: Decentralized Deployment Platform for AI Agents**
 
 Morpheus is a developer-first CLI tool that brings the simplicity of Vercel deployments to decentralized infrastructure. Deploy AI agents, MCP servers, and web applications to Akash Network with a single command.
 

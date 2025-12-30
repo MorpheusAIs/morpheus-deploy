@@ -22,7 +22,7 @@ interface ProjectAnswers {
 
 export async function initCommand(options: InitOptions): Promise<void> {
   console.log(chalk.bold.cyan('\n  Morpheus - Decentralized AI Deployment\n'));
-  console.log(chalk.dim('  The Vercel for Akash\n'));
+  console.log(chalk.dim('  The Vercel for DePin\n'));
 
   // Check if morpheus.yaml already exists
   if (existsSync('morpheus.yaml')) {

@@ -11,7 +11,7 @@ const program = new Command();
 
 program
   .name('morpheus')
-  .description('The Vercel for Akash - Deploy AI agents to decentralized infrastructure')
+  .description('The Vercel for DePin - Deploy AI agents to decentralized infrastructure')
   .version('0.1.0');
 
 // morpheus init - Initialize a new project
