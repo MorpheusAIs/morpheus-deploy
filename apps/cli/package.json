@@ -1,0 +1,62 @@
+{
+  "name": "morpheus",
+  "version": "0.1.0",
+  "description": "CLI for deploying AI agents to decentralized infrastructure",
+  "keywords": [
+    "cli",
+    "akash",
+    "depin",
+    "deployment",
+    "ai-agents"
+  ],
+  "license": "MIT",
+  "author": "Morpheus Contributors",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "bin": {
+    "morpheus": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/cli.ts src/index.ts --format esm --dts --clean",
+    "dev": "tsup src/cli.ts src/index.ts --format esm --dts --watch",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist coverage"
+  },
+  "dependencies": {
+    "@morpheus-deploy/core": "workspace:*",
+    "@morpheus-deploy/contracts": "workspace:*",
+    "@morpheus-deploy/adapters": "workspace:*",
+    "@morpheus-deploy/templates": "workspace:*",
+    "commander": "^12.0.0",
+    "inquirer": "^9.2.0",
+    "ora": "^8.0.0",
+    "chalk": "^5.3.0",
+    "yaml": "^2.3.0",
+    "dotenv": "^16.3.0",
+    "conf": "^12.0.0",
+    "keytar": "^7.9.0",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^9.0.7",
+    "@types/ws": "^8.5.10",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

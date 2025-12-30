@@ -1,0 +1,58 @@
+# Morpheus Vector Configuration
+# Log collection and forwarding for decentralized AI agents
+
+[api]
+enabled = true
+address = "0.0.0.0:8686"
+
+# Collect logs from agent container via shared volume
+[sources.agent_logs]
+type = "file"
+include = ["/var/log/app/*.log", "/var/log/app/**/*.log"]
+read_from = "beginning"
+fingerprint.strategy = "checksum"
+
+# Collect stdout/stderr if mounted
+[sources.agent_stdout]
+type = "file"
+include = ["/var/log/app/stdout.log"]
+read_from = "end"
+
+# Parse JSON logs if available
+[transforms.parse_json]
+type = "remap"
+inputs = ["agent_logs", "agent_stdout"]
+source = '''
+. = parse_json!(.message) ?? {"message": .message, "raw": true}
+.timestamp = now()
+.service = "agent"
+'''
+
+# Add metadata
+[transforms.enrich]
+type = "remap"
+inputs = ["parse_json"]
+source = '''
+.deployment = get_env_var("DEPLOYMENT_ID") ?? "unknown"
+.provider = get_env_var("PROVIDER") ?? "unknown"
+'''
+
+# Output to WebSocket relay for CLI streaming
+[sinks.websocket_relay]
+type = "websocket"
+inputs = ["enrich"]
+uri = "${MORPHEUS_LOG_RELAY_URL:-ws://localhost:8080/logs}"
+encoding.codec = "json"
+
+# Fallback to console output
+[sinks.console]
+type = "console"
+inputs = ["enrich"]
+encoding.codec = "json"
+target = "stdout"
+
+# Buffer configuration for reliability
+[sinks.websocket_relay.buffer]
+type = "disk"
+max_size = 104857600  # 100MB
+when_full = "block"

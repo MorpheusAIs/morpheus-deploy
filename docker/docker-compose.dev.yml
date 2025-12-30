@@ -1,0 +1,112 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: morpheus-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: workflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sidecars/postgres/init:/docker-entrypoint-initdb.d
+      - ./sidecars/postgres/postgresql.conf:/etc/postgresql/postgresql.conf
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  vector:
+    image: timberio/vector:0.26.0-alpine
+    container_name: morpheus-vector
+    volumes:
+      - ./sidecars/vector/vector.toml:/etc/vector/vector.toml:ro
+      - vector_data:/var/lib/vector
+    ports:
+      - "8686:8686"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      VECTOR_LOG: info
+
+  # Mock relay server for development
+  relay:
+    image: node:20-alpine
+    container_name: morpheus-relay
+    working_dir: /app
+    command: |
+      sh -c "
+        cat > server.js << 'EOF'
+        const http = require('http');
+        const WebSocket = require('ws');
+
+        const server = http.createServer((req, res) => {
+          if (req.url === '/health') {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ status: 'ok' }));
+            return;
+          }
+
+          if (req.url === '/topup' && req.method === 'POST') {
+            let body = '';
+            req.on('data', chunk => body += chunk);
+            req.on('end', () => {
+              console.log('Top-up request:', body);
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ success: true }));
+            });
+            return;
+          }
+
+          res.writeHead(404);
+          res.end('Not found');
+        });
+
+        const wss = new WebSocket.Server({ server, path: '/logs' });
+
+        wss.on('connection', (ws) => {
+          console.log('Client connected for log streaming');
+
+          // Send mock logs periodically
+          const interval = setInterval(() => {
+            ws.send(JSON.stringify({
+              timestamp: new Date().toISOString(),
+              service: 'agent',
+              level: 'info',
+              message: 'Heartbeat check'
+            }));
+          }, 30000);
+
+          ws.on('close', () => {
+            clearInterval(interval);
+            console.log('Client disconnected');
+          });
+        });
+
+        server.listen(8080, () => {
+          console.log('Mock relay server running on port 8080');
+        });
+        EOF
+        npm install ws && node server.js
+      "
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data:
+  vector_data:
+
+networks:
+  default:
+    name: morpheus-dev

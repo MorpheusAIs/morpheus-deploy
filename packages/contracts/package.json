@@ -1,0 +1,43 @@
+{
+  "name": "@morpheus-deploy/contracts",
+  "version": "0.1.0",
+  "description": "Smart contract ABIs and blockchain interactions for Morpheus",
+  "license": "MIT",
+  "author": "Morpheus Contributors",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "dev": "tsup src/index.ts --format esm --dts --watch",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist coverage"
+  },
+  "dependencies": {
+    "@coinbase/wallet-sdk": "^4.0.0",
+    "@cosmjs/stargate": "^0.32.0",
+    "@cosmjs/proto-signing": "^0.32.0",
+    "@akashnetwork/akashjs": "^0.10.0",
+    "viem": "^2.0.0",
+    "permissionless": "^0.1.0"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
