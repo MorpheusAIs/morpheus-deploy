@@ -2,6 +2,7 @@ export interface MorpheusConfig {
   project: string;
   template: 'ai-agent' | 'mcp-server' | 'website' | 'custom';
   provider: 'akash' | 'render' | 'filecoin';
+  network?: 'mainnet' | 'testnet';
   funding?: FundingConfig;
   resources?: ResourceConfig;
   runtime?: RuntimeConfig;

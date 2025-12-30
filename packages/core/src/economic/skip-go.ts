@@ -41,15 +41,28 @@ export interface TransactionRequest {
   gasLimit: string;
 }
 
+export type NetworkMode = 'mainnet' | 'testnet';
+
 export class SkipGoClient {
   private baseUrl: string = 'https://api.skip.money';
   private apiVersion: string = 'v2';
+  private network: NetworkMode = 'mainnet';
 
-  constructor(apiKey?: string) {
+  constructor(options?: { apiKey?: string; network?: NetworkMode }) {
     // API key for authenticated requests (optional for public endpoints)
-    if (apiKey) {
+    if (options?.apiKey) {
       // Store for authenticated requests
     }
+    if (options?.network) {
+      this.network = options.network;
+    }
+  }
+
+  /**
+   * Set network mode (mainnet or testnet)
+   */
+  setNetwork(network: NetworkMode): void {
+    this.network = network;
   }
 
   /**
@@ -266,13 +279,23 @@ export class SkipGoClient {
   }
 
   private getChainId(chain: string): string {
-    const chains: Record<string, string> = {
+    const mainnetChains: Record<string, string> = {
       base: '8453',
       akash: 'akashnet-2',
       osmosis: 'osmosis-1',
       ethereum: '1',
       arbitrum: '42161',
     };
+
+    const testnetChains: Record<string, string> = {
+      base: '84532', // Base Sepolia
+      akash: 'sandbox-01', // Akash Sandbox
+      osmosis: 'osmo-test-5', // Osmosis Testnet
+      ethereum: '11155111', // Sepolia
+      arbitrum: '421614', // Arbitrum Sepolia
+    };
+
+    const chains = this.network === 'testnet' ? testnetChains : mainnetChains;
     return chains[chain] || chain;
   }
 

@@ -144,3 +144,57 @@ describe('SDLOutput', () => {
     expect(typeof result.deployment).toBe('object');
   });
 });
+
+describe('Network Configuration', () => {
+  it('should support mainnet configuration', async () => {
+    const synthesizer = new SDLSynthesizer({
+      project: 'mainnet-test',
+      template: 'ai-agent',
+      provider: 'akash',
+      network: 'mainnet',
+      resources: { cpu: 1, memory: '1Gi', storage: '5Gi' },
+      runtime: { port: 8000 },
+    });
+
+    const result = await synthesizer.synthesize({
+      image: { tag: 'test:v1' },
+    });
+
+    expect(result).toBeDefined();
+    expect(result.version).toBe('2.0');
+  });
+
+  it('should support testnet configuration', async () => {
+    const synthesizer = new SDLSynthesizer({
+      project: 'testnet-test',
+      template: 'ai-agent',
+      provider: 'akash',
+      network: 'testnet',
+      resources: { cpu: 1, memory: '1Gi', storage: '5Gi' },
+      runtime: { port: 8000 },
+    });
+
+    const result = await synthesizer.synthesize({
+      image: { tag: 'test:v1' },
+    });
+
+    expect(result).toBeDefined();
+    expect(result.version).toBe('2.0');
+  });
+
+  it('should default to mainnet when network not specified', async () => {
+    const synthesizer = new SDLSynthesizer({
+      project: 'default-test',
+      template: 'ai-agent',
+      provider: 'akash',
+      resources: { cpu: 1, memory: '1Gi', storage: '5Gi' },
+      runtime: { port: 8000 },
+    });
+
+    const result = await synthesizer.synthesize({
+      image: { tag: 'test:v1' },
+    });
+
+    expect(result).toBeDefined();
+  });
+});

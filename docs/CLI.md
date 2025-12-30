@@ -428,9 +428,11 @@ project:
 # Deployment template
 template: ai-agent            # ai-agent | mcp-server | website | custom
 
+# Network selection
+network: mainnet              # mainnet | testnet (Base Sepolia + Akash Sandbox)
+
 # Provider configuration
 provider:
-  network: mainnet            # mainnet | testnet
   region: us-west             # Preferred region (hint only)
 
 # Funding configuration

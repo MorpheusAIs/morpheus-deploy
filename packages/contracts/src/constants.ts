@@ -21,7 +21,7 @@ export const CHAIN_CONFIG: Record<'mainnet' | 'testnet', {
     name: 'Base Sepolia',
     rpcUrl: 'https://sepolia.base.org',
     usdc: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
-    mor: '0x0000000000000000000000000000000000000000', // TODO: Add testnet MOR
+    mor: '0x5c80ddd187054e1e4abbffcd750498e81d34ffa3', // MOR token on Base Sepolia
     smartWalletFactory: '0x0BA5ED0c6AA8c49038F819E587E2633c4A9F428a',
   },
 };

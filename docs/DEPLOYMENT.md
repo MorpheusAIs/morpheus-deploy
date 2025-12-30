@@ -44,9 +44,9 @@ project:
   version: 1.0.0
 
 template: ai-agent
+network: mainnet  # Use 'testnet' for Base Sepolia + Akash Sandbox
 
 provider:
-  network: mainnet
   region: us-west
 
 funding:

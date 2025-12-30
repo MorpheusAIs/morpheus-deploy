@@ -1,6 +1,7 @@
 import { SkipGoClient, type RouteResponse } from './skip-go.js';
 import { PriceOracle } from './oracle.js';
 import type { MorpheusConfig } from '../sdl/types.js';
+import { STAKING_ADDRESS } from '@morpheus-deploy/contracts';
 
 export interface SwapConfig {
   sourceToken: string;
@@ -41,7 +42,7 @@ export class EconomicEngine {
   constructor(config: MorpheusConfig, wallet: WalletManager) {
     this.config = config;
     this.wallet = wallet;
-    this.skipGo = new SkipGoClient();
+    this.skipGo = new SkipGoClient({ network: config.network || 'mainnet' });
     this.oracle = new PriceOracle();
   }
 
@@ -223,9 +224,8 @@ export class EconomicEngine {
   }
 
   private getMorpheusStakingContract(): string {
-    // Morpheus staking contract on Base
-    // Note: Update this with the actual deployed contract address
-    return '0x47176B2Af9885dC6C4575d4eFd63895f7Aaa4790';
+    const network = this.config.network || 'mainnet';
+    return STAKING_ADDRESS[network];
   }
 
   private toBaseUnits(amount: number, decimals: number): string {

@@ -72,9 +72,9 @@ project:
   version: 1.0.0
 
 template: ai-agent
+network: mainnet  # or 'testnet' for Base Sepolia + Akash Sandbox
 
 provider:
-  network: mainnet
   region: us-west
 
 funding:
@@ -305,7 +305,7 @@ Build ─▶ Push ─▶ SDL ─▶ Broadcast ─▶ Bids ─▶ Lease ─▶ Ma
 | `project.name` | string | Project identifier |
 | `project.version` | string | Semantic version |
 | `template` | string | `ai-agent`, `mcp-server`, `website`, `custom` |
-| `provider.network` | string | `mainnet` or `testnet` |
+| `network` | string | `mainnet` or `testnet` |
 | `provider.region` | string | Preferred region |
 | `funding.source` | string | `smart-wallet` or `ephemeral` |
 | `funding.currency` | string | `USDC`, `AKT` |
@@ -321,16 +321,40 @@ Build ─▶ Push ─▶ SDL ─▶ Broadcast ─▶ Bids ─▶ Lease ─▶ Ma
 | `runtime.healthCheck.path` | string | Health endpoint |
 | `env` | object | Environment variables |
 
+### Testnet Configuration
+
+For development and testing, use testnet networks:
+
+```yaml
+# morpheus.yaml for testnet
+network: testnet  # Uses Base Sepolia + Akash Sandbox
+```
+
+| Network | Base Chain | Akash Chain | MOR Token |
+|---------|------------|-------------|-----------|
+| `mainnet` | Base (8453) | akashnet-2 | TBD |
+| `testnet` | Base Sepolia (84532) | sandbox-01 | `0x5c80...ffa3` |
+
+Testnet tokens:
+- **USDC**: `0x036CbD53842c5426634e7929541eC2318f3dCF7e` (Base Sepolia)
+- **MOR**: `0x5c80ddd187054e1e4abbffcd750498e81d34ffa3` (Base Sepolia)
+- **AKT**: Available from Akash Sandbox faucet
+
 ### Environment Variables
 
 ```bash
 # Wallet
 MORPHEUS_WALLET_PATH=~/.morpheus/wallet.json
 
-# Network
+# Network (mainnet)
 AKASH_NODE=https://rpc.akashnet.net:443
 AKASH_CHAIN_ID=akashnet-2
 BASE_RPC_URL=https://mainnet.base.org
+
+# Network (testnet)
+# AKASH_NODE=https://rpc.sandbox-01.akash.network:443
+# AKASH_CHAIN_ID=sandbox-01
+# BASE_RPC_URL=https://sepolia.base.org
 
 # Services
 SKIP_GO_API_URL=https://api.skip.money

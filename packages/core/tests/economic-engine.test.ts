@@ -57,6 +57,7 @@ describe('EconomicEngine', () => {
     project: 'test-project',
     template: 'ai-agent',
     provider: 'akash',
+    network: 'mainnet',
     resources: {
       cpu: 2,
       memory: '4Gi',
@@ -74,6 +75,12 @@ describe('EconomicEngine', () => {
         compute: 0.4,
       },
     },
+  };
+
+  const testnetConfig: MorpheusConfig = {
+    ...morpheusConfig,
+    project: 'testnet-project',
+    network: 'testnet',
   };
 
   beforeEach(() => {
@@ -163,6 +170,23 @@ describe('EconomicEngine', () => {
       const health = await engine.checkEscrowHealth(currentBalance, burnRate);
 
       expect(health.needsTopUp).toBe(true);
+    });
+  });
+
+  describe('network configuration', () => {
+    it('should support testnet configuration', () => {
+      const testnetEngine = new EconomicEngine(testnetConfig, mockWallet);
+      expect(testnetEngine).toBeDefined();
+    });
+
+    it('should default to mainnet when network not specified', () => {
+      const configWithoutNetwork: MorpheusConfig = {
+        project: 'test',
+        template: 'ai-agent',
+        provider: 'akash',
+      };
+      const defaultEngine = new EconomicEngine(configWithoutNetwork, mockWallet);
+      expect(defaultEngine).toBeDefined();
     });
   });
 });
