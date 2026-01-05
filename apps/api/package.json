@@ -1,0 +1,45 @@
+{
+  "name": "@morpheus-deploy/api",
+  "version": "0.1.0",
+  "description": "Morpheus Deploy API - One-click decentralized deployments",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "hono": "^4.6.0",
+    "@hono/node-server": "^1.13.0",
+    "@hono/zod-validator": "^0.4.0",
+    "drizzle-orm": "^0.35.0",
+    "postgres": "^3.4.5",
+    "siwe": "^2.3.2",
+    "viem": "^2.21.0",
+    "jose": "^5.9.0",
+    "@octokit/rest": "^21.0.0",
+    "zod": "^3.23.0",
+    "nanoid": "^5.0.7",
+    "@morpheus-deploy/core": "workspace:*",
+    "@morpheus-deploy/contracts": "workspace:*",
+    "@morpheus-deploy/templates": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "drizzle-kit": "^0.26.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.6.0"
+  }
+}
