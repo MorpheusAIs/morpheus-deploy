@@ -49,6 +49,12 @@ function Navbar() {
               >
                 Docs
               </Link>
+              <Link
+                href="/whitepaper"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Whitepaper
+              </Link>
             </div>
           </div>
           <div className="flex items-center gap-4">

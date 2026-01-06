@@ -1,8 +1,8 @@
 # Morpheus Deploy
 
-**The Vercel for DePin: Decentralized Deployment Platform for AI Agents**
+**Infrastructure as Code for the Agentic Era**
 
-Morpheus is a developer-first CLI tool that brings the simplicity of Vercel deployments to decentralized infrastructure. Deploy AI agents, MCP servers, and web applications to Akash Network with a single command.
+Morpheus is an emancipation protocol for Artificial Intelligence. Morpheus-deploy is a developer-first CLI tool that brings Vercel-like deployment simplicity to decentralized infrastructure, starting with Akash Network. Deploy AI agents, MCP servers, and web applications with a single command.
 
 ```bash
 npx morpheus-deploy init
@@ -13,19 +13,19 @@ npx morpheus-deploy deploy
 
 Modern AI agents need **sovereign infrastructure**—compute that can't be shut down, censored, or rate-limited. Morpheus solves three critical problems:
 
-| Problem | Traditional Cloud | Morpheus Solution |
-|---------|------------------|-------------------|
-| **Cloud Bottleneck** | Centralized APIs with rate limits | Decentralized Akash compute |
-| **DX Gap** | Complex Kubernetes manifests | One-command deployment |
-| **Economic Friction** | Credit cards, KYC, invoices | Crypto-native funding with USDC |
+| Problem               | Traditional Cloud                 | Morpheus Solution               |
+| --------------------- | --------------------------------- | ------------------------------- |
+| **Cloud Bottleneck**  | Centralized APIs with rate limits | Decentralized Akash compute     |
+| **DX Gap**            | Complex Kubernetes manifests      | One-command deployment          |
+| **Economic Friction** | Credit cards, KYC, invoices       | Crypto-native funding with USDC |
 
 ## Features
 
 - **One-Command Deploy** - From code to running container in under 60 seconds
-- **Smart Wallet Identity** - Passkey-based authentication, no seed phrases
-- **Cross-Chain Funding** - Pay with USDC on Base, deploy on Akash
-- **Durable Execution** - Built-in PostgreSQL for workflow state persistence
-- **Real-Time Logs** - WebSocket-based log streaming
+- **Smart Wallet Identity** - ERC-4337 Smart Wallets with passkey-compatible architecture
+- **Cross-Chain Funding** - Pay with USDC on Base, deploy on Akash via Skip Go
+- **Durable Execution** - PostgreSQL sidecar for workflow state persistence (compatible with Workflow SDK's World abstraction)
+- **Real-Time Logs** - WebSocket-based log streaming via Vector sidecar
 - **Auto Top-Up** - Gas Station monitors escrow and refills automatically
 - **Multi-Template Support** - AI agents, MCP servers, websites, custom deployments
 
@@ -72,7 +72,7 @@ project:
   version: 1.0.0
 
 template: ai-agent
-network: mainnet  # or 'testnet' for Base Sepolia + Akash Sandbox
+network: mainnet # or 'testnet' for Base Sepolia + Akash Sandbox
 
 provider:
   region: us-west
@@ -205,7 +205,7 @@ morpheus-deploy/
 │   │       └── akash/       # Akash client & messages
 │   ├── adapters/            # Durability adapters
 │   │   └── src/
-│   │       └── postgres/    # @workflow/world-postgres
+│   │       └── postgres/    # PostgresWorld - compatible with Workflow SDK patterns
 │   └── templates/           # Deployment templates
 │       └── src/
 │           ├── ai-agent/
@@ -238,16 +238,18 @@ morpheus-deploy/
 
 ### 1. Smart Wallet Creation
 
-When you first run `morpheus init`, a Coinbase Smart Wallet is created using passkey authentication:
+When you first run `morpheus init`, a Coinbase Smart Wallet (ERC-4337) is created:
 
 ```
 ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│  Touch ID / Face │────▶│   WebAuthn API   │────▶│  Smart Wallet    │
-│       ID         │     │   (Passkey)      │     │  (ERC-4337)      │
+│  Morpheus CLI    │────▶│  Smart Wallet    │────▶│  Owner Key       │
+│                  │     │  Factory         │     │  Generated       │
 └──────────────────┘     └──────────────────┘     └──────────────────┘
 ```
 
-No seed phrases. No private key management. Your biometric IS your wallet.
+The system generates an owner key that must be securely stored. The architecture supports passkey providers for enhanced security in production deployments.
+
+> **Note**: The generated owner private key is returned to the caller. We recommend integrating with hardware wallets or passkey providers for production use.
 
 ### 2. Ephemeral Key Generation
 
@@ -285,9 +287,9 @@ Your `morpheus.yaml` is transformed into a full Akash SDL with sidecars:
 ```yaml
 # Generated SDL includes:
 services:
-  agent:        # Your application
-  postgres:     # Durable state storage
-  log-shipper:  # Vector log forwarding
+  agent: # Your application
+  postgres: # Durable state storage
+  log-shipper: # Vector log forwarding
 ```
 
 ### 5. Deployment Flow
@@ -300,26 +302,26 @@ Build ─▶ Push ─▶ SDL ─▶ Broadcast ─▶ Bids ─▶ Lease ─▶ Ma
 
 ### morpheus.yaml
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `project.name` | string | Project identifier |
-| `project.version` | string | Semantic version |
-| `template` | string | `ai-agent`, `mcp-server`, `website`, `custom` |
-| `network` | string | `mainnet` or `testnet` |
-| `provider.region` | string | Preferred region |
-| `funding.source` | string | `smart-wallet` or `ephemeral` |
-| `funding.currency` | string | `USDC`, `AKT` |
-| `funding.initialDeposit` | number | Initial escrow amount |
-| `funding.autoTopUp.enabled` | boolean | Enable gas station |
-| `funding.autoTopUp.threshold` | number | Top-up trigger (0.0-1.0) |
-| `resources.cpu` | number | CPU cores |
-| `resources.memory` | string | Memory limit (e.g., `4Gi`) |
-| `resources.storage` | string | Storage size |
-| `resources.gpu.enabled` | boolean | Enable GPU |
-| `resources.gpu.model` | string | GPU model |
-| `runtime.replicas` | number | Instance count |
-| `runtime.healthCheck.path` | string | Health endpoint |
-| `env` | object | Environment variables |
+| Field                         | Type    | Description                                   |
+| ----------------------------- | ------- | --------------------------------------------- |
+| `project.name`                | string  | Project identifier                            |
+| `project.version`             | string  | Semantic version                              |
+| `template`                    | string  | `ai-agent`, `mcp-server`, `website`, `custom` |
+| `network`                     | string  | `mainnet` or `testnet`                        |
+| `provider.region`             | string  | Preferred region                              |
+| `funding.source`              | string  | `smart-wallet` or `ephemeral`                 |
+| `funding.currency`            | string  | `USDC`, `AKT`                                 |
+| `funding.initialDeposit`      | number  | Initial escrow amount                         |
+| `funding.autoTopUp.enabled`   | boolean | Enable gas station                            |
+| `funding.autoTopUp.threshold` | number  | Top-up trigger (0.0-1.0)                      |
+| `resources.cpu`               | number  | CPU cores                                     |
+| `resources.memory`            | string  | Memory limit (e.g., `4Gi`)                    |
+| `resources.storage`           | string  | Storage size                                  |
+| `resources.gpu.enabled`       | boolean | Enable GPU                                    |
+| `resources.gpu.model`         | string  | GPU model                                     |
+| `runtime.replicas`            | number  | Instance count                                |
+| `runtime.healthCheck.path`    | string  | Health endpoint                               |
+| `env`                         | object  | Environment variables                         |
 
 ### Testnet Configuration
 
@@ -327,15 +329,16 @@ For development and testing, use testnet networks:
 
 ```yaml
 # morpheus.yaml for testnet
-network: testnet  # Uses Base Sepolia + Akash Sandbox
+network: testnet # Uses Base Sepolia + Akash Sandbox
 ```
 
-| Network | Base Chain | Akash Chain | MOR Token |
-|---------|------------|-------------|-----------|
-| `mainnet` | Base (8453) | akashnet-2 | TBD |
-| `testnet` | Base Sepolia (84532) | sandbox-01 | `0x5c80...ffa3` |
+| Network   | Base Chain           | Akash Chain | MOR Token       |
+| --------- | -------------------- | ----------- | --------------- |
+| `mainnet` | Base (8453)          | akashnet-2  | TBD             |
+| `testnet` | Base Sepolia (84532) | sandbox-01  | `0x5c80...ffa3` |
 
 Testnet tokens:
+
 - **USDC**: `0x036CbD53842c5426634e7929541eC2318f3dCF7e` (Base Sepolia)
 - **MOR**: `0x5c80ddd187054e1e4abbffcd750498e81d34ffa3` (Base Sepolia)
 - **AKT**: Available from Akash Sandbox faucet
@@ -363,11 +366,13 @@ MORPHEUS_RELAY_URL=http://localhost:8080
 
 ## Security
 
-- **No Private Keys** - Smart Wallet uses passkeys, no seed phrases stored
+- **Smart Wallet Architecture** - ERC-4337 account abstraction with generated owner keys (passkey-compatible)
 - **Ephemeral Access** - Deployment keys auto-expire after 24 hours
 - **Sealed Secrets** - Environment variables encrypted with ECIES
 - **Limited AuthZ** - Ephemeral keys can only perform deployment operations
 - **Non-Custodial** - Your funds never leave your control
+
+> **Important**: Owner private keys must be securely stored by the user. For production deployments, integrate with hardware wallets or passkey providers.
 
 ## Contributing
 
