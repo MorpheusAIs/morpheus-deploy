@@ -1,20 +1,17 @@
 'use client';
 
-import Link from 'next/link';
 import {
-  Rocket,
   Wallet,
   Github,
   Cloud,
-  Zap,
   Shield,
   Cpu,
   Activity,
   RefreshCw,
   ArrowRight,
   Terminal,
-  Globe,
 } from 'lucide-react';
+import Link from 'next/link';
 
 function Navbar() {
   return (
@@ -23,10 +20,8 @@ function Navbar() {
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center">
-                <Rocket className="h-4 w-4 text-white" />
-              </div>
-              <span className="text-lg font-semibold">Morpheus</span>
+              <Terminal className="h-6 w-6 text-teal-500" />
+              <span className="text-lg font-semibold text-white">morpheus deploy</span>
             </Link>
             <div className="hidden md:flex items-center gap-6">
               <Link
@@ -81,8 +76,8 @@ function HeroSection() {
 
       <div className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center">
         <div className="inline-flex items-center gap-2 rounded-full border border-teal-500/20 bg-teal-500/10 px-4 py-1.5 text-sm text-teal-400 mb-8">
-          <Zap className="h-3.5 w-3.5" />
-          Powered by Akash Network
+          <Terminal className="h-3.5 w-3.5" />
+          v1.0.0 Now Available on Base Sepolia
         </div>
 
         <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight mb-6">
@@ -104,15 +99,17 @@ function HeroSection() {
             href="/deploy"
             className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 px-8 py-4 text-lg font-medium text-white shadow-xl shadow-teal-500/25 hover:shadow-teal-500/40 transition-all hover:scale-105"
           >
+            <Terminal className="h-5 w-5" />
             Deploy Now
-            <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
           </Link>
           <Link
-            href="/docs"
+            href="https://github.com/morpheus-deploy/morpheus-deploy"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-xl border border-border bg-card/50 px-8 py-4 text-lg font-medium hover:bg-card transition-colors"
           >
-            <Terminal className="h-5 w-5" />
-            View Docs
+            <Github className="h-5 w-5" />
+            View on GitHub
           </Link>
         </div>
 
@@ -131,7 +128,7 @@ function HeroSection() {
             <code className="text-teal-400">$</code>
             <code className="text-white"> npx morpheus-deploy deploy</code>
             <br />
-            <code className="text-green-400">Deployed to https://abc123.akash.network</code>
+            <code className="text-green-400">Deployed to https://yourproject.akash.network</code>
           </div>
         </div>
       </div>
@@ -326,101 +323,44 @@ function Footer() {
   return (
     <footer className="border-t border-border/50 py-12 bg-card/30">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-          <div>
-            <h4 className="font-semibold mb-4">Product</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>
-                <Link href="/deploy" className="hover:text-foreground transition-colors">
-                  Deploy
-                </Link>
-              </li>
-              <li>
-                <Link href="#features" className="hover:text-foreground transition-colors">
-                  Features
-                </Link>
-              </li>
-              <li>
-                <Link href="#pricing" className="hover:text-foreground transition-colors">
-                  Pricing
-                </Link>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-semibold mb-4">Resources</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>
-                <Link href="/docs" className="hover:text-foreground transition-colors">
-                  Documentation
-                </Link>
-              </li>
-              <li>
-                <Link href="/docs/api" className="hover:text-foreground transition-colors">
-                  API Reference
-                </Link>
-              </li>
-              <li>
-                <Link href="/docs/templates" className="hover:text-foreground transition-colors">
-                  Templates
-                </Link>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-semibold mb-4">Company</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>
-                <Link href="/about" className="hover:text-foreground transition-colors">
-                  About
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="https://github.com/morpheus-deploy"
-                  className="hover:text-foreground transition-colors"
-                >
-                  GitHub
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="https://twitter.com/morpheusdeploy"
-                  className="hover:text-foreground transition-colors"
-                >
-                  Twitter
-                </Link>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-semibold mb-4">Legal</h4>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>
-                <Link href="/privacy" className="hover:text-foreground transition-colors">
-                  Privacy
-                </Link>
-              </li>
-              <li>
-                <Link href="/terms" className="hover:text-foreground transition-colors">
-                  Terms
-                </Link>
-              </li>
-            </ul>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-6 mb-8">
+          <Link href="/" className="flex items-center gap-2">
+            <Terminal className="h-6 w-6 text-teal-500" />
+            <span className="text-lg font-semibold text-white">morpheus deploy</span>
+          </Link>
+          <div className="flex items-center gap-6 text-sm text-muted-foreground">
+            <Link href="/docs" className="hover:text-foreground transition-colors">
+              Documentation
+            </Link>
+            <Link
+              href="https://github.com/morpheus-deploy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground transition-colors"
+            >
+              GitHub
+            </Link>
+            <Link
+              href="https://discord.gg/morpheusdeploy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground transition-colors"
+            >
+              Discord
+            </Link>
+            <Link
+              href="https://twitter.com/morpheusdeploy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground transition-colors"
+            >
+              Twitter
+            </Link>
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-between pt-8 border-t border-border/50">
-          <div className="flex items-center gap-2 mb-4 sm:mb-0">
-            <div className="h-6 w-6 rounded-md bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center">
-              <Rocket className="h-3 w-3 text-white" />
-            </div>
-            <span className="font-semibold">Morpheus Deploy</span>
-          </div>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <Globe className="h-4 w-4" />
-            <span>Powered by Akash Network</span>
-          </div>
+        <div className="text-center text-sm text-muted-foreground pt-8 border-t border-border/50">
+          © 2025 Morpheus Deploy. Open source software for decentralized deployment.
         </div>
       </div>
     </footer>

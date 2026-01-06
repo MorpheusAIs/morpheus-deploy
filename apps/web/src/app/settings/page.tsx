@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import {
-  Rocket,
   Key,
+  Terminal,
   Github,
   Wallet,
   Bell,
@@ -53,10 +53,8 @@ function Navbar() {
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center">
-                <Rocket className="h-4 w-4 text-white" />
-              </div>
-              <span className="text-lg font-semibold">Morpheus</span>
+              <Terminal className="h-6 w-6 text-teal-500" />
+              <span className="text-lg font-semibold text-teal-500">morpheus deploy</span>
             </Link>
             <div className="hidden md:flex items-center gap-6">
               <Link

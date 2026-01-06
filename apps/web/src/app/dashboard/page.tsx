@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import {
-  Rocket,
   Activity,
+  Terminal,
   DollarSign,
   ExternalLink,
   MoreVertical,
@@ -102,10 +102,8 @@ function Navbar() {
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center">
-                <Rocket className="h-4 w-4 text-white" />
-              </div>
-              <span className="text-lg font-semibold">Morpheus</span>
+              <Terminal className="h-6 w-6 text-teal-500" />
+              <span className="text-lg font-semibold text-teal-500">morpheus deploy</span>
             </Link>
             <div className="hidden md:flex items-center gap-6">
               <Link href="/dashboard" className="text-sm text-foreground font-medium">
@@ -295,7 +293,7 @@ function EmptyState() {
   return (
     <div className="text-center py-16">
       <div className="mx-auto w-16 h-16 rounded-2xl bg-teal-500/10 flex items-center justify-center mb-6">
-        <Rocket className="h-8 w-8 text-teal-500" />
+        <Terminal className="h-8 w-8 text-teal-500" />
       </div>
       <h3 className="text-xl font-semibold mb-2">No deployments yet</h3>
       <p className="text-muted-foreground mb-6 max-w-md mx-auto">
