@@ -1,3 +1,5 @@
 {
-  "pages": ["index", "init", "deploy", "logs", "status", "fund", "env"]
+  "title": "CLI Reference",
+  "defaultOpen": false,
+  "pages": ["init", "deploy", "logs", "status", "fund", "env"]
 }

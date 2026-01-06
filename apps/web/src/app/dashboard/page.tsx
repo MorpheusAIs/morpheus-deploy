@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { Footer } from '@/components/footer';
 
 type DeploymentStatus = 'running' | 'deploying' | 'stopped' | 'failed';
 
@@ -103,7 +104,7 @@ function Navbar() {
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2">
               <Terminal className="h-6 w-6 text-teal-500" />
-              <span className="text-lg font-semibold text-teal-500">morpheus deploy</span>
+              <span className="text-lg font-semibold text-white">morpheus deploy</span>
             </Link>
             <div className="hidden md:flex items-center gap-6">
               <Link href="/dashboard" className="text-sm text-foreground font-medium">
@@ -327,9 +328,9 @@ export default function DashboardPage() {
   const runningCount = mockDeployments.filter((d) => d.status === 'running').length;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <main className="pt-24 pb-12 px-4">
+      <main className="pt-24 pb-12 px-4 flex-1">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
             <div>
@@ -421,6 +422,7 @@ export default function DashboardPage() {
           )}
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

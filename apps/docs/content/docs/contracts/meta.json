@@ -1,3 +1,5 @@
 {
-  "pages": ["index", "smart-wallet", "ephemeral-keys", "authz", "staking", "akash-client"]
+  "title": "Blockchain",
+  "defaultOpen": false,
+  "pages": ["smart-wallet", "ephemeral-keys", "authz", "staking", "akash-client"]
 }

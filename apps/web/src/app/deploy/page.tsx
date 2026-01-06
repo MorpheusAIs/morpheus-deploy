@@ -17,6 +17,7 @@ import {
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
+import { Footer } from '@/components/footer';
 
 type Step = 'connect' | 'repo' | 'config' | 'deploy';
 
@@ -37,7 +38,7 @@ function Navbar() {
         <div className="flex h-16 items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Terminal className="h-6 w-6 text-teal-500" />
-            <span className="text-lg font-semibold text-teal-500">morpheus deploy</span>
+            <span className="text-lg font-semibold text-white">morpheus deploy</span>
           </Link>
         </div>
       </div>
@@ -521,9 +522,9 @@ function DeployPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <main className="py-12 px-4">
+      <main className="py-12 px-4 flex-1">
         <div className="max-w-3xl mx-auto">
           <StepIndicator currentStep={step} steps={steps} />
 
@@ -549,6 +550,7 @@ function DeployPageContent() {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

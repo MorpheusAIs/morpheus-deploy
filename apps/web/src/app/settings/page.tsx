@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { Footer } from '@/components/footer';
 
 interface ApiKey {
   id: string;
@@ -54,7 +55,7 @@ function Navbar() {
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2">
               <Terminal className="h-6 w-6 text-teal-500" />
-              <span className="text-lg font-semibold text-teal-500">morpheus deploy</span>
+              <span className="text-lg font-semibold text-white">morpheus deploy</span>
             </Link>
             <div className="hidden md:flex items-center gap-6">
               <Link
@@ -541,9 +542,9 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <main className="pt-24 pb-12 px-4">
+      <main className="pt-24 pb-12 px-4 flex-1">
         <div className="max-w-5xl mx-auto">
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-1">Settings</h1>
@@ -576,6 +577,7 @@ export default function SettingsPage() {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

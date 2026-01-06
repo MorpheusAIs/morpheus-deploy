@@ -1,6 +1,7 @@
 {
+  "title": "Guides",
+  "defaultOpen": false,
   "pages": [
-    "index",
     "wallet-setup",
     "cross-chain-funding",
     "sealed-secrets",

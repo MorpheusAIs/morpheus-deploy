@@ -1,3 +1,5 @@
 {
-  "pages": ["index", "authentication", "deployments", "api-keys", "button", "webhooks"]
+  "title": "API Reference",
+  "defaultOpen": false,
+  "pages": ["authentication", "deployments", "api-keys", "button", "webhooks"]
 }
