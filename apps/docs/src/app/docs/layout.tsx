@@ -27,7 +27,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         },
         {
           text: 'GitHub',
-          url: 'https://github.com/morpheus-deploy/morpheus-deploy',
+          url: 'https://github.com/morpheusais/morpheus-deploy',
           external: true,
         },
       ]}

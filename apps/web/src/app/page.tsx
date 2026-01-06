@@ -114,24 +114,7 @@ function HeroSection() {
           </Link>
         </div>
 
-        <div className="mt-16 rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm p-1 shadow-2xl max-w-3xl mx-auto">
-          <div className="rounded-lg bg-[#0d1117] p-4 font-mono text-sm text-left overflow-x-auto">
-            <div className="flex items-center gap-2 text-muted-foreground mb-3">
-              <div className="h-3 w-3 rounded-full bg-red-500/80" />
-              <div className="h-3 w-3 rounded-full bg-yellow-500/80" />
-              <div className="h-3 w-3 rounded-full bg-green-500/80" />
-            </div>
-            <code className="text-teal-400">$</code>
-            <code className="text-white"> npx morpheus-deploy init</code>
-            <br />
-            <code className="text-muted-foreground">Creating morpheus.yaml...</code>
-            <br />
-            <code className="text-teal-400">$</code>
-            <code className="text-white"> npx morpheus-deploy deploy</code>
-            <br />
-            <code className="text-green-400">Deployed to https://yourproject.akash.network</code>
-          </div>
-        </div>
+        <TerminalAnimation />
       </div>
     </section>
   );

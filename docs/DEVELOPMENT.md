@@ -26,7 +26,7 @@ This guide walks through setting up a local development environment for Morpheus
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/morpheus-deploy/morpheus-deploy.git
+git clone https://github.com/morpheusais/morpheus-deploy.git
 cd morpheus-deploy
 ```
 

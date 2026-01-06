@@ -353,7 +353,7 @@ function GitHubTab() {
             Connect your GitHub account to import repositories and enable automatic deployments.
           </p>
           <Link
-            href="https://github.com/morpheus-deploy/morpheus-deploy"
+            href="https://github.com/morpheusais/morpheus-deploy"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-xl bg-[#24292e] px-6 py-3 font-medium text-white hover:bg-[#374151] transition-colors"

@@ -12,7 +12,7 @@ npm install -g morpheus-cli
 pnpm add -g morpheus-cli
 
 # From source
-git clone https://github.com/morpheus-deploy/morpheus-deploy.git
+git clone https://github.com/morpheusais/morpheus-deploy.git
 cd morpheus-deploy
 pnpm install && pnpm build
 cd apps/cli && pnpm link --global

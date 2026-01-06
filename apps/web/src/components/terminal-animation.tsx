@@ -60,6 +60,14 @@ function TypedText({
   );
 }
 
+function OutputText({ text, onComplete }: { text: string; onComplete: () => void }) {
+  useEffect(() => {
+    onComplete();
+  }, [onComplete]);
+
+  return <>{text}</>;
+}
+
 export function TerminalAnimation() {
   const [currentLineIndex, setCurrentLineIndex] = useState(0);
   const [completedLines, setCompletedLines] = useState<number[]>([]);
@@ -133,12 +141,16 @@ export function TerminalAnimation() {
                     {isLastLine(index) && <Cursor visible={true} />}
                   </>
                 ) : currentLineIndex === index && showLine[index] ? (
-                  <TypedText
-                    text={line.content}
-                    onComplete={handleLineComplete}
-                    showCursor={shouldShowCursor(index)}
-                    speed={line.type === 'command' ? 40 : 25}
-                  />
+                  line.type === 'command' ? (
+                    <TypedText
+                      text={line.content}
+                      onComplete={handleLineComplete}
+                      showCursor={shouldShowCursor(index)}
+                      speed={40}
+                    />
+                  ) : (
+                    <OutputText text={line.content} onComplete={handleLineComplete} />
+                  )
                 ) : null}
               </span>
             </motion.div>

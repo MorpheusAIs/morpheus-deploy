@@ -1,5 +1,3 @@
 {
-  "title": "CLI Reference",
-  "defaultOpen": true,
   "pages": ["index", "init", "deploy", "logs", "status", "fund", "env"]
 }
