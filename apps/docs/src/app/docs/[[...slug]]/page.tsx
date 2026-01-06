@@ -15,7 +15,6 @@ export default async function Page({ params }: { params: { slug?: string[] } }) 
   return (
     <DocsPage toc={page.data.toc}>
       <DocsBody>
-        <h1>{page.data.title}</h1>
         <MDX components={{ ...defaultMdxComponents }} />
       </DocsBody>
     </DocsPage>

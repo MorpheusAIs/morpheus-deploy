@@ -12,6 +12,7 @@ import {
   Terminal,
 } from 'lucide-react';
 import Link from 'next/link';
+import { TerminalAnimation } from '@/components/terminal-animation';
 
 function Navbar() {
   return (
@@ -395,7 +396,12 @@ function Footer() {
             <span className="text-lg font-semibold text-white">morpheus deploy</span>
           </Link>
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <Link href="https://mor.org" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
+            <Link
+              href="https://mor.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-foreground transition-colors"
+            >
               About Morpheus
             </Link>
             <Link href="/docs" className="hover:text-foreground transition-colors">

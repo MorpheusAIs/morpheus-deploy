@@ -9,13 +9,9 @@
     "architecture",
     "templates",
     "sdl-synthesis",
-    "---CLI Reference---",
     "cli",
-    "---API Reference---",
     "api",
-    "---Blockchain---",
     "contracts",
-    "---Guides---",
     "guides"
   ]
 }
