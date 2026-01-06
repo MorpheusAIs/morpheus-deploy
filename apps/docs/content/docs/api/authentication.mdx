@@ -1,0 +1,197 @@
+---
+title: Authentication
+description: API authentication methods - API keys, SIWE, and GitHub OAuth
+---
+
+# Authentication
+
+Morpheus supports three authentication methods for different use cases.
+
+## API Keys
+
+For programmatic access (AI agents, CI/CD, automation).
+
+### Create an API Key
+
+First, authenticate with your wallet via SIWE, then create a key:
+
+```bash
+curl -X POST https://api.morpheus.network/api/keys \
+  -H "Authorization: Bearer <wallet-jwt>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "CI/CD Pipeline",
+    "permissions": ["deploy", "status", "logs"]
+  }'
+```
+
+Response:
+
+```json
+{
+  "id": "key_abc123",
+  "key": "mor_sk_a1b2c3d4e5f6g7h8i9j0...",
+  "name": "CI/CD Pipeline",
+  "permissions": ["deploy", "status", "logs"],
+  "createdAt": "2024-01-15T10:30:00Z"
+}
+```
+
+**Important:** The full API key is only shown once. Store it securely.
+
+### Using API Keys
+
+Include the key in the Authorization header:
+
+```bash
+curl https://api.morpheus.network/api/deployments \
+  -H "Authorization: Bearer mor_sk_a1b2c3d4e5f6..."
+```
+
+### Key Format
+
+```
+mor_sk_{32-character-random-string}
+```
+
+### Permissions
+
+| Permission | Description                   |
+| ---------- | ----------------------------- |
+| `deploy`   | Create and manage deployments |
+| `status`   | View deployment status        |
+| `logs`     | Stream deployment logs        |
+| `keys`     | Manage API keys (admin only)  |
+
+## SIWE (Sign-In with Ethereum)
+
+For browser-based applications using Smart Wallet.
+
+### Flow
+
+1. **Get Nonce**
+
+```bash
+curl https://api.morpheus.network/api/auth/nonce
+
+{
+  "nonce": "abc123xyz",
+  "sessionId": "sess_abc123"
+}
+```
+
+2. **Create SIWE Message**
+
+```typescript
+import { SiweMessage } from 'siwe';
+
+const message = new SiweMessage({
+  domain: 'morpheus.network',
+  address: walletAddress,
+  statement: 'Sign in to Morpheus Deploy',
+  uri: 'https://morpheus.network',
+  version: '1',
+  chainId: 8453, // Base
+  nonce: nonce,
+});
+
+const messageString = message.prepareMessage();
+```
+
+3. **Sign Message**
+
+```typescript
+const signature = await wallet.signMessage(messageString);
+```
+
+4. **Verify and Get Token**
+
+```bash
+curl -X POST https://api.morpheus.network/api/auth/verify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "<siwe-message>",
+    "signature": "0x...",
+    "sessionId": "sess_abc123"
+  }'
+```
+
+Response:
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIs...",
+  "address": "0x1234...",
+  "expiresAt": "2024-01-16T10:30:00Z"
+}
+```
+
+5. **Use JWT Token**
+
+```bash
+curl https://api.morpheus.network/api/deployments \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..."
+```
+
+## GitHub OAuth
+
+For repository access and webhook configuration.
+
+### Flow
+
+1. **Initiate OAuth**
+
+Redirect user to:
+
+```
+https://api.morpheus.network/api/auth/github
+```
+
+2. **Handle Callback**
+
+After authorization, user is redirected to:
+
+```
+https://morpheus.network/auth/success?token=<jwt>
+```
+
+3. **Use Token**
+
+The JWT includes GitHub scopes:
+
+```bash
+curl https://api.morpheus.network/api/repos \
+  -H "Authorization: Bearer <github-jwt>"
+```
+
+### Scopes Requested
+
+- `repo` - Full repository access
+- `read:user` - Read user profile
+- `user:email` - Read user email
+
+## Token Expiration
+
+| Token Type | Expiration            | Refresh         |
+| ---------- | --------------------- | --------------- |
+| API Key    | Never (until revoked) | N/A             |
+| SIWE JWT   | 24 hours              | Re-authenticate |
+| GitHub JWT | 8 hours               | Re-authenticate |
+
+## Security Best Practices
+
+1. **API Keys**
+   - Store in environment variables, never in code
+   - Rotate regularly
+   - Use minimal required permissions
+   - Revoke immediately if compromised
+
+2. **SIWE**
+   - Validate nonce to prevent replay attacks
+   - Check message expiration
+   - Verify chain ID matches expected network
+
+3. **General**
+   - Use HTTPS only
+   - Implement request signing for high-value operations
+   - Monitor for unusual activity

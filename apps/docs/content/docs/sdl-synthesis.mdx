@@ -1,0 +1,257 @@
+---
+title: SDL Synthesis
+description: How Morpheus transforms your configuration into Akash SDL
+---
+
+# SDL Synthesis
+
+Morpheus automatically generates Akash SDL (Stack Definition Language) from your `morpheus.yaml` configuration. This page explains how the synthesis process works.
+
+## What is SDL?
+
+SDL is Akash's deployment manifest format, similar to Docker Compose or Kubernetes manifests. It defines:
+
+- **Services** - Container images, resources, exposed ports
+- **Profiles** - Resource allocations (CPU, memory, storage, GPU)
+- **Deployment** - Service-to-profile mapping
+- **Placement** - Provider selection criteria
+
+## The Synthesis Process
+
+### Input: morpheus.yaml
+
+```yaml
+project:
+  name: my-agent
+
+template: ai-agent
+
+resources:
+  cpu: 4
+  memory: 8Gi
+  storage: 20Gi
+  gpu:
+    enabled: true
+    model: rtx4090
+    count: 1
+
+runtime:
+  replicas: 1
+  healthCheck:
+    path: /health
+    interval: 30s
+
+env:
+  NODE_ENV: production
+  API_KEY: sealed:v1:encrypted...
+```
+
+### Output: deploy.yaml (Akash SDL)
+
+```yaml
+version: '2.0'
+
+services:
+  agent:
+    image: ghcr.io/user/my-agent:latest
+    expose:
+      - port: 3000
+        as: 80
+        to:
+          - global: true
+    env:
+      - NODE_ENV=production
+      - API_KEY=decrypted_value
+    args:
+      - node
+      - dist/index.js
+
+  postgres:
+    image: postgres:16-alpine
+    expose:
+      - port: 5432
+        to:
+          - service: agent
+    env:
+      - POSTGRES_DB=morpheus
+      - POSTGRES_USER=morpheus
+      - POSTGRES_PASSWORD=generated_password
+
+  vector:
+    image: timberio/vector:0.34.0-alpine
+    env:
+      - VECTOR_CONFIG=/etc/vector/vector.toml
+
+profiles:
+  compute:
+    agent:
+      resources:
+        cpu:
+          units: 4
+        memory:
+          size: 8Gi
+        storage:
+          - size: 20Gi
+        gpu:
+          units: 1
+          attributes:
+            vendor:
+              nvidia:
+                - model: rtx4090
+    postgres:
+      resources:
+        cpu:
+          units: 0.5
+        memory:
+          size: 512Mi
+        storage:
+          - size: 5Gi
+    vector:
+      resources:
+        cpu:
+          units: 0.1
+        memory:
+          size: 128Mi
+        storage:
+          - size: 1Gi
+
+  placement:
+    default:
+      pricing:
+        agent:
+          denom: uakt
+          amount: 10000
+        postgres:
+          denom: uakt
+          amount: 1000
+        vector:
+          denom: uakt
+          amount: 500
+
+deployment:
+  agent:
+    default:
+      profile: agent
+      count: 1
+  postgres:
+    default:
+      profile: postgres
+      count: 1
+  vector:
+    default:
+      profile: vector
+      count: 1
+```
+
+## Synthesis Components
+
+### SDLSynthesizer
+
+The main synthesizer class orchestrates the process:
+
+```typescript
+import { SDLSynthesizer } from '@morpheus-deploy/core';
+
+const synthesizer = new SDLSynthesizer();
+const sdl = await synthesizer.synthesize({
+  config: parsedConfig,
+  image: 'ghcr.io/user/my-agent:latest',
+  sidecars: ['postgres', 'vector'],
+});
+```
+
+### Template-Specific Synthesis
+
+Each template has custom synthesis logic:
+
+```typescript
+// AI Agent template adds GPU support and sidecars
+class AIAgentTemplate implements Template {
+  synthesize(config: MorpheusConfig): SDLConfig {
+    return {
+      services: [
+        this.buildMainService(config),
+        this.buildPostgresSidecar(),
+        this.buildVectorSidecar(),
+      ],
+      profiles: this.buildProfiles(config),
+      placement: this.buildPlacement(config),
+    };
+  }
+}
+```
+
+### Resource Mapping
+
+Morpheus resources map to SDL as follows:
+
+| morpheus.yaml        | SDL                                              |
+| -------------------- | ------------------------------------------------ |
+| `cpu: 2`             | `cpu.units: 2`                                   |
+| `memory: 4Gi`        | `memory.size: 4Gi`                               |
+| `storage: 10Gi`      | `storage[0].size: 10Gi`                          |
+| `gpu.model: rtx4090` | `gpu.attributes.vendor.nvidia[0].model: rtx4090` |
+| `gpu.count: 1`       | `gpu.units: 1`                                   |
+
+### Secret Decryption
+
+Sealed secrets are decrypted during synthesis:
+
+```typescript
+const secrets = new SealedSecrets(privateKey);
+const env = await secrets.decryptAll(config.env);
+
+// sealed:v1:abc123... → actual_secret_value
+```
+
+## Validation
+
+The `SDLValidator` checks your configuration before synthesis:
+
+```typescript
+const validator = new SDLValidator();
+const result = await validator.validate(config);
+
+if (!result.valid) {
+  console.error(result.errors);
+  // [{ field: 'resources.memory', message: 'Must be at least 256Mi' }]
+}
+```
+
+### Validation Rules
+
+- **Resources**: CPU >= 0.1, Memory >= 256Mi, Storage >= 1Gi
+- **GPU**: Valid model names, count >= 1
+- **Replicas**: 1-10 for standard templates
+- **Health Check**: Valid path, interval >= 10s
+- **Secrets**: Valid sealed format
+
+## Dry Run
+
+Preview the generated SDL without deploying:
+
+```bash
+morpheus deploy --dry-run
+```
+
+This outputs the synthesized SDL to stdout, allowing you to inspect it before deployment.
+
+## Custom SDL
+
+For advanced use cases, you can provide your own SDL:
+
+```yaml
+template: custom
+
+sdl: |
+  version: "2.0"
+  services:
+    # Your custom SDL here
+```
+
+Or reference an external file:
+
+```yaml
+template: custom
+sdlPath: ./custom-deploy.yaml
+```

@@ -1,0 +1,12 @@
+{
+  "title": "Guides",
+  "defaultOpen": true,
+  "pages": [
+    "index",
+    "wallet-setup",
+    "cross-chain-funding",
+    "sealed-secrets",
+    "auto-topup",
+    "gpu-deployments"
+  ]
+}

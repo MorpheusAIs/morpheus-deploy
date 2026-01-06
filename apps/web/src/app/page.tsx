@@ -262,6 +262,72 @@ function FeaturesSection() {
   );
 }
 
+function ProvidersSection() {
+  const providers = [
+    {
+      name: 'Akash Network',
+      description: 'Decentralized cloud compute marketplace',
+      status: 'available',
+    },
+    {
+      name: 'Flux',
+      description: 'Decentralized Web3 cloud infrastructure',
+      status: 'coming-soon',
+    },
+    {
+      name: 'Dfinity ICP',
+      description: 'Internet Computer blockchain platform',
+      status: 'coming-soon',
+    },
+    {
+      name: 'Filecoin',
+      description: 'Decentralized storage network',
+      status: 'coming-soon',
+    },
+  ];
+
+  return (
+    <section className="py-24 sm:py-32">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+            Deploy to multiple decentralized providers
+          </h2>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            Choose the provider that best fits your needs, or deploy to multiple providers for
+            maximum resilience.
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          {providers.map((provider) => (
+            <div
+              key={provider.name}
+              className="bg-card border border-border/50 rounded-2xl p-6 hover:border-teal-500/50 transition-all hover:shadow-xl hover:shadow-teal-500/5"
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h3 className="text-xl font-semibold mb-2">{provider.name}</h3>
+                  <p className="text-muted-foreground text-sm">{provider.description}</p>
+                </div>
+                <div
+                  className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    provider.status === 'available'
+                      ? 'bg-teal-500/20 text-teal-400 border border-teal-500/30'
+                      : 'bg-muted text-muted-foreground border border-border'
+                  }`}
+                >
+                  {provider.status === 'available' ? 'Available' : 'Coming Soon'}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function PricingSection() {
   const comparisons = [
     { resource: '2 vCPU, 4GB RAM', cloud: '$60/mo', morpheus: '$25/mo' },
@@ -329,6 +395,9 @@ function Footer() {
             <span className="text-lg font-semibold text-white">morpheus deploy</span>
           </Link>
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
+            <Link href="https://mor.org" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
+              About Morpheus
+            </Link>
             <Link href="/docs" className="hover:text-foreground transition-colors">
               Documentation
             </Link>
@@ -360,7 +429,7 @@ function Footer() {
         </div>
 
         <div className="text-center text-sm text-muted-foreground pt-8 border-t border-border/50">
-          © 2025 Morpheus Deploy. Open source software for decentralized deployment.
+          © 2025 by Morpheus. Open source infrastructure for Agentic AI.
         </div>
       </div>
     </footer>
@@ -374,6 +443,7 @@ export default function HomePage() {
       <HeroSection />
       <HowItWorksSection />
       <FeaturesSection />
+      <ProvidersSection />
       <PricingSection />
       <Footer />
     </main>

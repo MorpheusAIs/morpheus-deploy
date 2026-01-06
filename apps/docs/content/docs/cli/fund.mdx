@@ -1,0 +1,165 @@
+---
+title: morpheus fund
+description: Add funds to your deployment escrow
+---
+
+# morpheus fund
+
+Add funds to your deployment's escrow account to extend its runtime.
+
+## Usage
+
+```bash
+morpheus fund [options] [dseq]
+```
+
+## Arguments
+
+| Argument | Description                                                         |
+| -------- | ------------------------------------------------------------------- |
+| `dseq`   | Deployment sequence number (optional, uses latest if not specified) |
+
+## Options
+
+| Option         | Description                                |
+| -------------- | ------------------------------------------ |
+| `--amount, -a` | Amount to fund in USDC (required)          |
+| `--currency`   | Source currency: USDC, AKT (default: USDC) |
+| `--yes, -y`    | Skip confirmation prompt                   |
+
+## Process
+
+When you fund a deployment:
+
+1. **Check Balance** - Verify your wallet has sufficient funds
+2. **Quote Swap** - Get exchange rate from Skip Go
+3. **Confirm** - Show transaction details
+4. **Execute Swap** - Convert USDC → AKT
+5. **Deposit** - Add AKT to deployment escrow
+
+```bash
+morpheus fund --amount 25
+
+Funding deployment 12345678...
+
+Current escrow: 0.5 AKT (~$1.65)
+
+Swap quote:
+  25.00 USDC → 7.58 AKT
+  Rate: 1 AKT = 3.30 USDC
+  Fee: 0.15 USDC (0.6%)
+
+Proceed? (y/n) y
+
+Executing swap...
+✓ Swapped 25.00 USDC → 7.58 AKT
+
+Depositing to escrow...
+✓ Deposited 7.58 AKT
+
+New escrow balance: 8.08 AKT (~$26.65)
+Estimated time remaining: 67 days
+```
+
+## Skip Confirmation
+
+For automation:
+
+```bash
+morpheus fund --amount 25 --yes
+```
+
+## Using AKT Directly
+
+If you have AKT, skip the swap:
+
+```bash
+morpheus fund --amount 10 --currency AKT
+```
+
+## Auto Top-Up
+
+Configure automatic funding in your `morpheus.yaml`:
+
+```yaml
+funding:
+  autoTopUp:
+    enabled: true
+    threshold: 0.10 # Trigger when balance drops to 10%
+    amount: 5.00 # Add $5 each time
+```
+
+Check auto top-up status:
+
+```bash
+morpheus status
+
+Escrow:
+  Balance: 2.8 AKT (~$9.24)
+  Auto Top-Up: Enabled
+  Threshold: 0.28 AKT (~$0.92)
+  Top-Up Amount: 5.00 USDC
+```
+
+## Estimating Costs
+
+Check how much funding you need:
+
+```bash
+morpheus status --json | jq '.escrow'
+
+{
+  "balance": "2.8",
+  "ratePerBlock": "0.0015",
+  "estimatedDaysRemaining": 23
+}
+```
+
+To extend by 30 days with your current burn rate:
+
+```bash
+# Calculate: 30 days × 24 hours × 60 blocks/hour × 0.0015 AKT/block
+# = 64.8 AKT needed
+# At $3.30/AKT = ~$214 USDC
+
+morpheus fund --amount 214
+```
+
+## Transaction Details
+
+View recent funding transactions:
+
+```bash
+morpheus fund --history
+
+Date                Amount      TX Hash
+2024-01-15 10:30    25.00 USDC  0xabc123...
+2024-01-10 14:20    10.00 USDC  0xdef456...
+2024-01-05 09:15    50.00 USDC  0xghi789...
+```
+
+## Examples
+
+Fund latest deployment with $25:
+
+```bash
+morpheus fund --amount 25
+```
+
+Fund specific deployment:
+
+```bash
+morpheus fund 12345678 --amount 25
+```
+
+Fund with AKT:
+
+```bash
+morpheus fund --amount 10 --currency AKT
+```
+
+Auto-confirm for CI/CD:
+
+```bash
+morpheus fund --amount 25 --yes
+```

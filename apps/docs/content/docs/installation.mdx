@@ -1,0 +1,106 @@
+---
+title: Installation
+description: Install Morpheus Deploy CLI and set up your development environment
+---
+
+# Installation
+
+Get Morpheus Deploy installed and ready to use in minutes.
+
+## Prerequisites
+
+Before installing Morpheus, ensure you have:
+
+- **Node.js 20+** - [Download Node.js](https://nodejs.org)
+- **pnpm 8+** - Install with `npm install -g pnpm`
+- **Docker** - Required for local builds ([Download Docker](https://docker.com))
+
+## Quick Install
+
+The fastest way to get started is using npx:
+
+```bash
+npx morpheus-deploy init
+```
+
+This will:
+
+1. Create a `morpheus.yaml` configuration file
+2. Set up a Smart Wallet (if not already configured)
+3. Detect your project type and suggest a template
+
+## Global Installation
+
+For frequent use, install Morpheus globally:
+
+```bash
+npm install -g morpheus-deploy
+```
+
+Or with pnpm:
+
+```bash
+pnpm add -g morpheus-deploy
+```
+
+Now you can use `morpheus` directly:
+
+```bash
+morpheus init
+morpheus deploy
+morpheus logs
+```
+
+## From Source
+
+For development or to get the latest features:
+
+```bash
+# Clone the repository
+git clone https://github.com/morpheus-deploy/morpheus-deploy.git
+cd morpheus-deploy
+
+# Install dependencies
+pnpm install
+
+# Build all packages
+pnpm build
+
+# Link CLI globally
+cd apps/cli && pnpm link --global
+```
+
+## Verify Installation
+
+Check that Morpheus is installed correctly:
+
+```bash
+morpheus --version
+# morpheus-deploy v0.1.0
+
+morpheus --help
+# Shows available commands
+```
+
+## Environment Variables
+
+Morpheus uses the following optional environment variables:
+
+```bash
+# Wallet configuration
+MORPHEUS_WALLET_PATH=~/.morpheus/wallet.json
+
+# Network (mainnet by default)
+AKASH_NODE=https://rpc.akashnet.net:443
+AKASH_CHAIN_ID=akashnet-2
+BASE_RPC_URL=https://mainnet.base.org
+
+# For testnet development
+# AKASH_NODE=https://rpc.sandbox-01.akash.network:443
+# AKASH_CHAIN_ID=sandbox-01
+# BASE_RPC_URL=https://sepolia.base.org
+```
+
+## Next Steps
+
+Once installed, continue to the [Quick Start](/docs/quickstart) guide to deploy your first application.

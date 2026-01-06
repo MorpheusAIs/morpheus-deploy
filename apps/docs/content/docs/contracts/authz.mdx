@@ -1,0 +1,390 @@
+---
+title: AuthZ Grants
+description: Cosmos AuthZ for delegated deployment permissions
+---
+
+# AuthZ Grants
+
+Cosmos AuthZ (Authorization) allows one account to grant specific permissions to another account. Morpheus uses AuthZ to delegate deployment capabilities to ephemeral keys while keeping the main wallet secure.
+
+## Overview
+
+AuthZ enables:
+
+- **Delegation** - Grant specific message types to another account
+- **Spend Limits** - Cap how much the grantee can spend
+- **Expiration** - Grants automatically expire
+- **Revocation** - Revoke grants anytime
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Granter (Smart Wallet)                       │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │                    Creates Grant                          │  │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐   │  │
+│  │  │ MsgGrant    │  │ Permissions │  │ Expiration      │   │  │
+│  │  │ (AuthZ)     │──│ Akash Msgs  │──│ 30 days         │   │  │
+│  │  └─────────────┘  └─────────────┘  └─────────────────┘   │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────│──────────────────────────┘
+                                       │
+                                       ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                     Grantee (Ephemeral Key)                      │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │                    Uses Grant                             │  │
+│  │  ┌─────────────┐                  ┌─────────────────┐     │  │
+│  │  │ MsgExec     │───ON BEHALF OF──▶│ Akash Network   │     │  │
+│  │  │ (AuthZ)     │                  │ (Deployment)    │     │  │
+│  │  └─────────────┘                  └─────────────────┘     │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+## Installation
+
+```typescript
+import { AuthZManager } from '@morpheus-deploy/contracts';
+```
+
+## Creating Grants
+
+### Connect with Granter Wallet
+
+```typescript
+const authz = new AuthZManager('https://rpc.akashnet.net:443');
+await authz.connect(granterMnemonic);
+```
+
+### Deployment Grant
+
+Creates a standard grant for deployment operations:
+
+```typescript
+const grant = await authz.createDeploymentGrant(
+  'akash1granter...', // Your main wallet
+  'akash1grantee...', // Ephemeral key address
+  true // Enable gas station (auto top-up)
+);
+
+console.log(grant);
+// {
+//   granter: 'akash1granter...',
+//   grantee: 'akash1grantee...',
+//   permissions: [...],
+//   expiration: Date,
+//   txHash: 'ABC123...'
+// }
+```
+
+### Custom Grant
+
+For fine-grained control:
+
+```typescript
+const grant = await authz.createGrant({
+  granter: 'akash1granter...',
+  grantee: 'akash1grantee...',
+  permissions: [
+    { msgType: '/akash.deployment.v1beta3.MsgCreateDeployment' },
+    { msgType: '/akash.deployment.v1beta3.MsgCloseDeployment' },
+    // Add spend limit for bank transfers
+    {
+      msgType: '/cosmos.bank.v1beta1.MsgSend',
+      spendLimit: { denom: 'uakt', amount: '10000000' }, // 10 AKT max
+    },
+  ],
+  expirationDays: 7, // Shorter expiration
+});
+```
+
+## Standard Permissions
+
+Morpheus uses these standard deployment permissions:
+
+```typescript
+const DEPLOYMENT_PERMISSIONS = [
+  '/akash.deployment.v1beta3.MsgCreateDeployment',
+  '/akash.deployment.v1beta3.MsgUpdateDeployment',
+  '/akash.deployment.v1beta3.MsgCloseDeployment',
+  '/akash.deployment.v1beta3.MsgDepositDeployment',
+  '/akash.market.v1beta4.MsgCreateLease',
+];
+```
+
+For Gas Station (auto top-up):
+
+```typescript
+const GAS_STATION_PERMISSION = {
+  msgType: '/cosmos.bank.v1beta1.MsgSend',
+  spendLimit: {
+    denom: 'uakt',
+    amount: '100000000', // 100 AKT max per top-up
+  },
+};
+```
+
+## Querying Grants
+
+### List All Grants
+
+```typescript
+const grants = await authz.queryGrants('akash1grantee...');
+
+for (const grant of grants) {
+  console.log(`From: ${grant.granter}`);
+  console.log(`Permissions: ${grant.permissions.map((p) => p.msgType)}`);
+  console.log(`Expires: ${grant.expiration}`);
+}
+```
+
+### Check Specific Grant
+
+```typescript
+const hasGrant = await authz.hasValidGrant(
+  'akash1granter...',
+  'akash1grantee...',
+  '/akash.deployment.v1beta3.MsgCreateDeployment'
+);
+
+if (!hasGrant) {
+  console.log('Need to create a new grant');
+}
+```
+
+## Revoking Grants
+
+### Single Permission
+
+```typescript
+const txHash = await authz.revokeGrant(
+  'akash1granter...',
+  'akash1grantee...',
+  '/akash.deployment.v1beta3.MsgCreateDeployment'
+);
+```
+
+### All Permissions
+
+Revoke each permission individually:
+
+```typescript
+for (const permission of DEPLOYMENT_PERMISSIONS) {
+  await authz.revokeGrant(granter, grantee, permission);
+}
+```
+
+## Executing with Grants
+
+When the grantee wants to perform an action on behalf of the granter:
+
+```typescript
+import { AkashMessages } from '@morpheus-deploy/contracts';
+
+// Create the deployment message (as if granter was sending it)
+const deploymentMsg = AkashMessages.createDeployment({
+  owner: granter, // The granter's address
+  dseq: '12345',
+  version: sdlHash,
+  groups: [],
+  deposit: { denom: 'uakt', amount: '5000000' },
+});
+
+// Execute using AuthZ
+const txHash = await authz.executeWithGrant(
+  grantee, // Signing as grantee
+  granter, // On behalf of granter
+  [deploymentMsg]
+);
+```
+
+## API Reference
+
+### AuthZPermission
+
+```typescript
+interface AuthZPermission {
+  msgType: string;
+  spendLimit?: {
+    denom: string;
+    amount: string;
+  };
+}
+```
+
+### AuthZGrant
+
+```typescript
+interface AuthZGrant {
+  granter: string;
+  grantee: string;
+  permissions: AuthZPermission[];
+  expiration: Date;
+  txHash?: string;
+}
+```
+
+### GrantOptions
+
+```typescript
+interface GrantOptions {
+  granter: string;
+  grantee: string;
+  permissions: AuthZPermission[];
+  expirationDays?: number; // Default: 7
+}
+```
+
+### Methods
+
+| Method                                                 | Description                     |
+| ------------------------------------------------------ | ------------------------------- |
+| `connect(mnemonic)`                                    | Connect with signing wallet     |
+| `createGrant(options)`                                 | Create custom AuthZ grant       |
+| `createDeploymentGrant(granter, grantee, gasStation?)` | Standard deployment grant       |
+| `revokeGrant(granter, grantee, msgType)`               | Revoke specific permission      |
+| `queryGrants(grantee)`                                 | List all grants for address     |
+| `hasValidGrant(granter, grantee, msgType)`             | Check if grant exists and valid |
+| `executeWithGrant(grantee, granter, msgs)`             | Execute messages using grant    |
+
+## Integration Flow
+
+### 1. Initial Setup (Once)
+
+```typescript
+// Create ephemeral key
+const ephemeral = new EphemeralKeyManager();
+const keyData = await ephemeral.generate(DEPLOYMENT_PERMISSIONS);
+
+// Create AuthZ grant
+const authz = new AuthZManager();
+await authz.connect(mainWalletMnemonic);
+
+const grant = await authz.createDeploymentGrant(
+  mainWalletAddress,
+  keyData.address,
+  true // Gas station
+);
+
+// Record grant in ephemeral key data
+await ephemeral.recordGrant(grant.txHash);
+```
+
+### 2. Deployment Operations (Ongoing)
+
+```typescript
+// Load ephemeral key
+const ephemeral = new EphemeralKeyManager();
+await ephemeral.load();
+
+// Verify grant is still valid
+const authz = new AuthZManager();
+const hasGrant = await authz.hasValidGrant(
+  mainWalletAddress,
+  ephemeral.getAccount().address,
+  '/akash.deployment.v1beta3.MsgCreateDeployment'
+);
+
+if (!hasGrant) {
+  throw new Error('AuthZ grant expired or revoked');
+}
+
+// Execute deployment using grant
+await authz.executeWithGrant(ephemeral.getAccount().address, mainWalletAddress, [deploymentMsg]);
+```
+
+### 3. Cleanup
+
+```typescript
+// When done, revoke grants
+await authz.revokeGrant(granter, grantee, msgType);
+
+// And revoke ephemeral key
+await ephemeral.revoke();
+```
+
+## Security Considerations
+
+### Expiration Strategy
+
+| Use Case           | Recommended Expiration |
+| ------------------ | ---------------------- |
+| CI/CD pipeline     | 1-4 hours              |
+| Development        | 24 hours               |
+| Production service | 7-30 days              |
+
+### Spend Limits
+
+Always set spend limits for `MsgSend`:
+
+```typescript
+{
+  msgType: '/cosmos.bank.v1beta1.MsgSend',
+  spendLimit: {
+    denom: 'uakt',
+    amount: '100000000', // 100 AKT max
+  }
+}
+```
+
+### Monitoring
+
+Monitor grant usage:
+
+```bash
+# Check all grants from your wallet
+akash query authz grants-by-granter akash1granter...
+
+# Check what your grantee can do
+akash query authz grants-by-grantee akash1grantee...
+```
+
+## Troubleshooting
+
+### "authorization not found"
+
+The grant doesn't exist or has expired:
+
+```typescript
+// Check if grant exists
+const grants = await authz.queryGrants(granteeAddress);
+console.log(grants);
+
+// If empty, create new grant
+await authz.createDeploymentGrant(granter, grantee);
+```
+
+### "spend limit exceeded"
+
+The grantee tried to spend more than allowed:
+
+```typescript
+// Check the spend limit
+const grants = await authz.queryGrants(granteeAddress);
+const sendGrant = grants.find((g) => g.permissions.some((p) => p.msgType.includes('MsgSend')));
+console.log('Remaining limit:', sendGrant?.permissions[0].spendLimit);
+```
+
+### "unauthorized"
+
+The message type isn't in the grant:
+
+```typescript
+// Verify permission exists
+const hasPermission = await authz.hasValidGrant(
+  granter,
+  grantee,
+  '/akash.deployment.v1beta3.MsgCreateDeployment'
+);
+
+if (!hasPermission) {
+  // Add the missing permission
+  await authz.createGrant({
+    granter,
+    grantee,
+    permissions: [{ msgType: '/akash.deployment.v1beta3.MsgCreateDeployment' }],
+  });
+}
+```

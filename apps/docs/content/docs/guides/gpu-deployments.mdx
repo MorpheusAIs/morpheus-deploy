@@ -1,0 +1,509 @@
+---
+title: GPU Deployments
+description: Deploy AI workloads with GPU acceleration
+---
+
+# GPU Deployments Guide
+
+This guide covers deploying GPU-accelerated AI workloads to Akash Network, including model inference, training, and multi-GPU configurations.
+
+## Overview
+
+Akash Network offers various GPU types at competitive prices:
+
+| GPU Model | VRAM | Use Case                     | Approx. Price |
+| --------- | ---- | ---------------------------- | ------------- |
+| RTX 3080  | 10GB | Small models, inference      | $0.20-0.30/hr |
+| RTX 3090  | 24GB | Medium models                | $0.30-0.50/hr |
+| RTX 4090  | 24GB | Large models, fast inference | $0.50-0.80/hr |
+| A100 40GB | 40GB | Training, large models       | $1.00-2.00/hr |
+| A100 80GB | 80GB | Very large models            | $2.00-3.00/hr |
+| H100      | 80GB | Cutting-edge AI              | $3.00-5.00/hr |
+
+## Quick Start
+
+### Initialize with GPU Template
+
+```bash
+morpheus init --template ai-agent --gpu
+
+# Output:
+# ? Select GPU model:
+#   > RTX 4090 (24GB) - Best for inference
+#     A100 40GB - Best for training
+#     A100 80GB - Large models
+#     H100 - Cutting-edge performance
+#
+# ✓ Created morpheus.yaml with GPU configuration
+```
+
+### Basic GPU Configuration
+
+```yaml
+# morpheus.yaml
+project:
+  name: my-ai-agent
+
+template: ai-agent
+
+resources:
+  cpu: 4
+  memory: 16Gi
+  storage: 50Gi
+  gpu:
+    enabled: true
+    model: rtx4090
+    count: 1
+
+runtime:
+  image: nvidia/cuda:12.0-runtime
+```
+
+### Deploy
+
+```bash
+morpheus deploy
+
+# Output:
+# [1/5] Building image...
+# [2/5] Pushing to registry...
+# [3/5] Finding GPU providers...
+#       Found 12 providers with RTX 4090
+# [4/5] Selecting best bid...
+#       Provider: akash1provider...
+#       Price: 0.45 AKT/block (~$0.72/hr)
+#       GPU: NVIDIA RTX 4090 (24GB)
+# [5/5] Creating lease...
+#       ✓ Deployment ready!
+#       URL: https://abc123.provider.akash.network
+```
+
+## GPU Configuration Options
+
+### Supported GPU Models
+
+```yaml
+resources:
+  gpu:
+    enabled: true
+    model: rtx4090 # See table below
+    count: 1 # Number of GPUs
+```
+
+| Model ID    | GPU              | VRAM |
+| ----------- | ---------------- | ---- |
+| `rtx3080`   | NVIDIA RTX 3080  | 10GB |
+| `rtx3090`   | NVIDIA RTX 3090  | 24GB |
+| `rtx4090`   | NVIDIA RTX 4090  | 24GB |
+| `a10`       | NVIDIA A10       | 24GB |
+| `a40`       | NVIDIA A40       | 48GB |
+| `a100`      | NVIDIA A100 40GB | 40GB |
+| `a100-80gb` | NVIDIA A100 80GB | 80GB |
+| `h100`      | NVIDIA H100      | 80GB |
+
+### Multi-GPU Setup
+
+```yaml
+resources:
+  gpu:
+    enabled: true
+    model: a100
+    count: 4 # 4x A100 GPUs
+
+  # Increase other resources accordingly
+  cpu: 32
+  memory: 128Gi
+```
+
+### GPU with Specific Requirements
+
+```yaml
+resources:
+  gpu:
+    enabled: true
+    model: rtx4090
+    count: 1
+    requirements:
+      minVram: 24 # GB minimum
+      compute: '8.9' # CUDA compute capability
+      driver: '>=525.0' # Minimum driver version
+```
+
+## AI Agent Examples
+
+### LLM Inference (Ollama)
+
+```yaml
+# morpheus.yaml
+project:
+  name: llm-agent
+
+template: ai-agent
+
+resources:
+  cpu: 4
+  memory: 32Gi
+  storage: 100Gi # For model storage
+  gpu:
+    enabled: true
+    model: rtx4090
+    count: 1
+
+runtime:
+  image: ollama/ollama:latest
+  command: ['ollama', 'serve']
+  ports:
+    - 11434
+
+env:
+  OLLAMA_HOST: '0.0.0.0'
+```
+
+### Hugging Face Transformers
+
+```dockerfile
+# Dockerfile
+FROM nvidia/cuda:12.0-runtime-ubuntu22.04
+
+RUN pip install transformers torch accelerate
+
+COPY . /app
+WORKDIR /app
+
+CMD ["python", "serve.py"]
+```
+
+```yaml
+# morpheus.yaml
+resources:
+  gpu:
+    enabled: true
+    model: a100
+    count: 1
+
+env:
+  HF_TOKEN: sealed:v1:...
+  MODEL_NAME: 'meta-llama/Llama-2-70b'
+```
+
+### Stable Diffusion
+
+```yaml
+# morpheus.yaml
+project:
+  name: image-gen
+
+resources:
+  cpu: 4
+  memory: 16Gi
+  storage: 50Gi
+  gpu:
+    enabled: true
+    model: rtx4090
+    count: 1
+
+runtime:
+  image: your-registry/stable-diffusion:latest
+  ports:
+    - 7860
+
+env:
+  SAFETENSORS_FAST_GPU: '1'
+```
+
+### vLLM for High-Throughput Inference
+
+```yaml
+# morpheus.yaml
+project:
+  name: vllm-server
+
+resources:
+  cpu: 8
+  memory: 64Gi
+  storage: 200Gi
+  gpu:
+    enabled: true
+    model: a100-80gb
+    count: 2
+
+runtime:
+  image: vllm/vllm-openai:latest
+  args:
+    - '--model=meta-llama/Llama-2-70b-chat-hf'
+    - '--tensor-parallel-size=2'
+  ports:
+    - 8000
+
+env:
+  HF_TOKEN: sealed:v1:...
+```
+
+## Provider Selection
+
+### Finding GPU Providers
+
+```bash
+# List available GPU providers
+morpheus providers list --gpu
+
+# Output:
+# GPU Providers
+# ─────────────
+#
+# Provider              GPUs        Price/hr    Region
+# ────────────────────────────────────────────────────
+# akash1abc...         4x RTX 4090  $0.72      us-west
+# akash1def...         2x A100 40GB $2.10      eu-west
+# akash1ghi...         8x H100      $28.00     us-east
+```
+
+### Provider Preferences
+
+```yaml
+provider:
+  region: us-west # Preferred region
+
+  preferences:
+    gpuProvider: true # Only GPU providers
+    minUptime: 99.0 # 99% uptime minimum
+    audited: true # Only audited providers
+
+  blacklist:
+    - akash1badprovider... # Exclude specific providers
+```
+
+## Cost Optimization
+
+### Right-Sizing GPUs
+
+| Model Size      | Recommended GPU | Cost          |
+| --------------- | --------------- | ------------- |
+| Up to 7B params | RTX 3080/3090   | $0.20-0.50/hr |
+| 7B-13B params   | RTX 4090        | $0.50-0.80/hr |
+| 13B-30B params  | A100 40GB       | $1.00-2.00/hr |
+| 30B-70B params  | A100 80GB       | $2.00-3.00/hr |
+| 70B+ params     | 2x A100 or H100 | $3.00-6.00/hr |
+
+### Quantization
+
+Reduce VRAM requirements with quantization:
+
+```yaml
+env:
+  # For llama.cpp compatible models
+  QUANTIZATION: 'q4_k_m' # 4-bit quantization
+
+  # For transformers
+  LOAD_IN_4BIT: 'true'
+  BNB_4BIT_COMPUTE_DTYPE: 'float16'
+```
+
+This can let you run 70B models on a single RTX 4090!
+
+### Spot Pricing
+
+Some providers offer lower prices during off-peak:
+
+```yaml
+provider:
+  pricing:
+    maxHourly: 0.50 # Max $0.50/hr
+    preferSpot: true # Accept spot pricing
+```
+
+## Memory and Storage
+
+### GPU Memory Requirements
+
+| Task                | VRAM Needed |
+| ------------------- | ----------- |
+| 7B model inference  | 8-14GB      |
+| 13B model inference | 16-26GB     |
+| 70B model (4-bit)   | 35-40GB     |
+| Stable Diffusion XL | 12-16GB     |
+| Training 7B model   | 40-80GB     |
+
+### Model Storage
+
+Large models need adequate storage:
+
+```yaml
+resources:
+  storage: 200Gi # For 70B+ models
+
+# Or use a separate volume
+volumes:
+  - name: model-cache
+    size: 500Gi
+    mount: /models
+
+env:
+  HF_HOME: '/models'
+  TRANSFORMERS_CACHE: '/models'
+```
+
+## Multi-GPU Training
+
+### Distributed Training Setup
+
+```yaml
+# morpheus.yaml
+resources:
+  cpu: 32
+  memory: 256Gi
+  storage: 500Gi
+  gpu:
+    enabled: true
+    model: a100
+    count: 8 # 8x A100 for training
+
+env:
+  WORLD_SIZE: '8'
+  MASTER_PORT: '29500'
+```
+
+### PyTorch DDP Example
+
+```dockerfile
+FROM pytorch/pytorch:2.0.0-cuda11.8-cudnn8-runtime
+
+RUN pip install transformers datasets accelerate deepspeed
+
+COPY train.py /app/
+WORKDIR /app
+
+CMD ["torchrun", "--nproc_per_node=8", "train.py"]
+```
+
+## Health Checks
+
+### GPU Health Monitoring
+
+```yaml
+runtime:
+  healthCheck:
+    type: exec
+    command: ["nvidia-smi", "--query-gpu=gpu_name", "--format=csv"]
+    interval: 30s
+    timeout: 10s
+
+  # Or HTTP endpoint that checks GPU
+  healthCheck:
+    type: http
+    path: /health/gpu
+    interval: 30s
+```
+
+### Automatic Recovery
+
+```yaml
+runtime:
+  restart:
+    policy: on-failure
+    maxRetries: 3
+    delay: 30s
+
+  # GPU-specific restart triggers
+  gpu:
+    restartOnOOM: true # Restart on GPU OOM
+    restartOnError: true # Restart on CUDA errors
+```
+
+## Debugging GPU Issues
+
+### Check GPU Access
+
+```bash
+# SSH into deployment (if enabled)
+morpheus exec --dseq 12345678 -- nvidia-smi
+
+# Output:
+# +-----------------------------------------------------------------------------+
+# | NVIDIA-SMI 525.85.12    Driver Version: 525.85.12    CUDA Version: 12.0     |
+# |-------------------------------+----------------------+----------------------+
+# | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
+# | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
+# |===============================+======================+======================|
+# |   0  NVIDIA GeForce ...  Off  | 00000000:01:00.0 Off |                  Off |
+# | 30%   45C    P0   100W / 350W |   8192MiB / 24576MiB |     45%      Default |
+# +-------------------------------+----------------------+----------------------+
+```
+
+### Check Logs
+
+```bash
+morpheus logs --dseq 12345678
+
+# Filter for CUDA errors
+morpheus logs --dseq 12345678 | grep -i "cuda\|gpu\|nvidia"
+```
+
+### Common Issues
+
+| Issue                    | Cause            | Solution                          |
+| ------------------------ | ---------------- | --------------------------------- |
+| "CUDA out of memory"     | Model too large  | Use smaller model or quantization |
+| "No CUDA GPUs available" | Driver mismatch  | Check runtime image CUDA version  |
+| "GPU not found"          | Provider issue   | Try different provider            |
+| Slow inference           | Memory bandwidth | Enable flash attention            |
+
+## Example: Full AI Agent Setup
+
+Complete example for a production AI agent:
+
+```yaml
+# morpheus.yaml
+project:
+  name: ai-assistant
+  version: 1.0.0
+
+template: ai-agent
+network: mainnet
+
+resources:
+  cpu: 8
+  memory: 32Gi
+  storage: 100Gi
+  gpu:
+    enabled: true
+    model: rtx4090
+    count: 1
+
+runtime:
+  image: your-registry/ai-assistant:latest
+  replicas: 1
+  ports:
+    - 8000
+  healthCheck:
+    path: /health
+    interval: 30s
+
+provider:
+  region: us-west
+  preferences:
+    audited: true
+    minUptime: 99.5
+
+funding:
+  source: smart-wallet
+  currency: USDC
+  initialDeposit: 100.00
+  autoTopUp:
+    enabled: true
+    threshold: 0.10
+    amount: 50.00
+
+env:
+  NODE_ENV: production
+  MODEL_PATH: '/models/llama-2-13b'
+  ANTHROPIC_API_KEY: sealed:v1:...
+  MAX_BATCH_SIZE: '32'
+  ENABLE_FLASH_ATTENTION: 'true'
+```
+
+## Next Steps
+
+- [Sealed Secrets](/docs/guides/sealed-secrets) - Secure your API keys
+- [Auto Top-Up](/docs/guides/auto-topup) - Keep your deployment funded
+- [Templates Reference](/docs/templates) - Pre-built configurations

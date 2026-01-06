@@ -1,26 +1,27 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
+import { useState } from 'react';
+
 import {
   Activity,
-  Terminal,
-  DollarSign,
-  ExternalLink,
-  MoreVertical,
-  Play,
-  Pause,
-  Trash2,
-  RefreshCw,
-  Plus,
+  ChevronDown,
   Clock,
   Cpu,
-  HardDrive,
-  Zap,
-  ChevronDown,
-  Search,
+  DollarSign,
+  ExternalLink,
   Filter,
+  HardDrive,
+  MoreVertical,
+  Pause,
+  Play,
+  Plus,
+  RefreshCw,
+  Search,
+  Terminal,
+  Trash2,
   Wallet,
+  Zap,
 } from 'lucide-react';
 
 type DeploymentStatus = 'running' | 'deploying' | 'stopped' | 'failed';

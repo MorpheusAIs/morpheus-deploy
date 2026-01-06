@@ -1,0 +1,281 @@
+---
+title: Deployments
+description: API endpoints for creating and managing deployments
+---
+
+# Deployments API
+
+Create, manage, and monitor deployments on Akash Network.
+
+## Create Deployment
+
+Create a new deployment from a repository.
+
+```http
+POST /api/deploy
+```
+
+### Request Body
+
+```json
+{
+  "repoUrl": "github.com/user/repo",
+  "branch": "main",
+  "template": "ai-agent",
+  "resources": {
+    "cpu": 2,
+    "memory": "4Gi",
+    "storage": "10Gi",
+    "gpu": {
+      "model": "rtx4090",
+      "count": 1
+    }
+  },
+  "env": {
+    "MODEL": "claude-3-5-sonnet",
+    "API_KEY": "sealed:v1:..."
+  },
+  "funding": {
+    "initialDeposit": 50,
+    "autoTopUp": true,
+    "maxBudget": 100
+  }
+}
+```
+
+### Parameters
+
+| Field                    | Type    | Required | Description                                     |
+| ------------------------ | ------- | -------- | ----------------------------------------------- |
+| `repoUrl`                | string  | Yes      | GitHub repository URL                           |
+| `branch`                 | string  | No       | Branch to deploy (default: main)                |
+| `template`               | string  | No       | Template: ai-agent, mcp-server, website, custom |
+| `resources.cpu`          | number  | No       | CPU cores (default: 2)                          |
+| `resources.memory`       | string  | No       | Memory (default: 4Gi)                           |
+| `resources.storage`      | string  | No       | Storage (default: 10Gi)                         |
+| `resources.gpu.model`    | string  | No       | GPU model                                       |
+| `resources.gpu.count`    | number  | No       | GPU count                                       |
+| `env`                    | object  | No       | Environment variables                           |
+| `funding.initialDeposit` | number  | No       | Initial USDC deposit                            |
+| `funding.autoTopUp`      | boolean | No       | Enable auto top-up                              |
+| `funding.maxBudget`      | number  | No       | Maximum monthly budget                          |
+
+### Response
+
+```json
+{
+  "deploymentId": "dep_abc123",
+  "dseq": "12345678",
+  "status": "pending",
+  "estimatedTime": "2-3 minutes"
+}
+```
+
+## Get Cost Preview
+
+Estimate deployment costs without creating a deployment.
+
+```http
+POST /api/deploy/preview
+```
+
+### Request Body
+
+```json
+{
+  "repoUrl": "github.com/user/repo",
+  "template": "ai-agent",
+  "resources": {
+    "cpu": 2,
+    "memory": "4Gi",
+    "gpu": {
+      "model": "rtx4090",
+      "count": 1
+    }
+  }
+}
+```
+
+### Response
+
+```json
+{
+  "estimate": {
+    "hourlyRate": 0.65,
+    "dailyRate": 15.6,
+    "monthlyRate": 468.0,
+    "currency": "USD"
+  },
+  "resources": {
+    "cpu": 2,
+    "memory": "4Gi",
+    "storage": "10Gi",
+    "gpu": { "model": "rtx4090", "count": 1 }
+  },
+  "suggestedTemplate": "ai-agent",
+  "detectedFramework": "node"
+}
+```
+
+## List Deployments
+
+Get all deployments for the authenticated user.
+
+```http
+GET /api/deployments
+```
+
+### Query Parameters
+
+| Parameter | Type   | Description                               |
+| --------- | ------ | ----------------------------------------- |
+| `status`  | string | Filter by status: active, stopped, failed |
+| `limit`   | number | Max results (default: 20)                 |
+| `offset`  | number | Pagination offset                         |
+
+### Response
+
+```json
+{
+  "deployments": [
+    {
+      "id": "dep_abc123",
+      "dseq": "12345678",
+      "name": "my-agent",
+      "repoUrl": "github.com/user/repo",
+      "status": "active",
+      "serviceUrl": "https://abc123.akash.network",
+      "createdAt": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "total": 1,
+  "limit": 20,
+  "offset": 0
+}
+```
+
+## Get Deployment Status
+
+Get detailed status for a specific deployment.
+
+```http
+GET /api/deployments/:dseq
+```
+
+### Response
+
+```json
+{
+  "dseq": "12345678",
+  "name": "my-agent",
+  "status": "active",
+  "provider": "akash1provider...",
+  "serviceUrl": "https://abc123.akash.network",
+  "escrowBalance": {
+    "amount": 45.5,
+    "currency": "AKT",
+    "usdValue": 150.0
+  },
+  "estimatedTimeRemaining": "5 days",
+  "resources": {
+    "cpu": { "allocated": 4, "used": 2.3 },
+    "memory": { "allocated": "8Gi", "used": "4.2Gi" },
+    "storage": { "allocated": "20Gi", "used": "8.5Gi" },
+    "gpu": { "model": "rtx4090", "count": 1 }
+  },
+  "services": [
+    { "name": "agent", "status": "running", "healthy": true },
+    { "name": "postgres", "status": "running", "healthy": true }
+  ],
+  "createdAt": "2024-01-15T10:30:00Z"
+}
+```
+
+## Close Deployment
+
+Close a deployment and recover remaining escrow funds.
+
+```http
+DELETE /api/deployments/:dseq
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "refundedAmount": 25.0,
+  "refundCurrency": "AKT",
+  "refundUsdValue": 82.5
+}
+```
+
+## Fund Deployment
+
+Add funds to a deployment's escrow account.
+
+```http
+POST /api/deployments/:dseq/fund
+```
+
+### Request Body
+
+```json
+{
+  "amount": 25.0,
+  "currency": "USDC"
+}
+```
+
+### Response
+
+```json
+{
+  "txHash": "0xabc123...",
+  "swapDetails": {
+    "sourceAmount": 25.0,
+    "sourceCurrency": "USDC",
+    "destinationAmount": 7.5,
+    "destinationCurrency": "AKT",
+    "rate": 3.33,
+    "fee": 0.15
+  },
+  "newBalance": {
+    "amount": 53.0,
+    "currency": "AKT",
+    "usdValue": 174.9
+  }
+}
+```
+
+## Stream Logs
+
+Stream real-time logs from a deployment via WebSocket.
+
+```
+wss://api.morpheus.network/api/deployments/:dseq/logs
+```
+
+### Connection
+
+```javascript
+const ws = new WebSocket('wss://api.morpheus.network/api/deployments/12345678/logs', {
+  headers: { Authorization: 'Bearer mor_sk_...' },
+});
+
+ws.onmessage = (event) => {
+  const log = JSON.parse(event.data);
+  console.log(`[${log.service}] ${log.message}`);
+};
+```
+
+### Message Format
+
+```json
+{
+  "timestamp": "2024-01-15T10:30:15.123Z",
+  "service": "agent",
+  "level": "info",
+  "message": "Server starting on port 3000"
+}
+```

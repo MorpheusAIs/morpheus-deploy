@@ -1,0 +1,21 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "---Getting Started---",
+    "installation",
+    "quickstart",
+    "---Core Concepts---",
+    "architecture",
+    "templates",
+    "sdl-synthesis",
+    "---CLI Reference---",
+    "cli",
+    "---API Reference---",
+    "api",
+    "---Blockchain---",
+    "contracts",
+    "---Guides---",
+    "guides"
+  ]
+}

@@ -1,23 +1,23 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
 import {
-  Key,
-  Terminal,
-  Github,
-  Wallet,
+  AlertCircle,
   Bell,
-  Shield,
-  Copy,
   Check,
-  Plus,
-  Trash2,
-  ExternalLink,
+  Copy,
   Eye,
   EyeOff,
-  AlertCircle,
+  ExternalLink,
+  Github,
+  Key,
+  Plus,
+  Shield,
+  Terminal,
+  Trash2,
+  Wallet,
 } from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
 
 interface ApiKey {
   id: string;

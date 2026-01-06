@@ -1,0 +1,133 @@
+---
+title: morpheus init
+description: Initialize a new Morpheus project
+---
+
+# morpheus init
+
+Initialize a new Morpheus project with a `morpheus.yaml` configuration file.
+
+## Usage
+
+```bash
+morpheus init [options]
+```
+
+## Options
+
+| Option           | Description                                            |
+| ---------------- | ------------------------------------------------------ |
+| `--template, -t` | Template to use: ai-agent, mcp-server, website, custom |
+| `--name`         | Project name                                           |
+| `--gpu`          | Enable GPU support                                     |
+| `--yes, -y`      | Skip prompts, use defaults                             |
+
+## Interactive Mode
+
+Without options, `init` runs interactively:
+
+```bash
+morpheus init
+
+? Project name: my-agent
+? Select template: AI Agent
+? Enable GPU? Yes
+? GPU model: RTX 4090
+? Initial deposit (USDC): 10
+? Enable auto top-up? Yes
+
+Created morpheus.yaml
+```
+
+## Non-Interactive Mode
+
+Use flags to skip prompts:
+
+```bash
+morpheus init \
+  --name my-agent \
+  --template ai-agent \
+  --gpu \
+  --yes
+```
+
+## Generated Configuration
+
+A typical generated `morpheus.yaml`:
+
+```yaml
+project:
+  name: my-agent
+  version: 1.0.0
+
+template: ai-agent
+network: mainnet
+
+funding:
+  source: smart-wallet
+  currency: USDC
+  initialDeposit: 10.00
+  autoTopUp:
+    enabled: true
+    threshold: 0.10
+    amount: 5.00
+
+resources:
+  cpu: 2
+  memory: 4Gi
+  storage: 10Gi
+  gpu:
+    enabled: true
+    model: rtx4090
+    count: 1
+
+runtime:
+  replicas: 1
+  healthCheck:
+    path: /health
+    interval: 30s
+
+env:
+  NODE_ENV: production
+```
+
+## Framework Detection
+
+Morpheus automatically detects your project framework:
+
+| Files Detected               | Framework | Template Suggestion |
+| ---------------------------- | --------- | ------------------- |
+| `package.json` + Next.js     | Next.js   | website             |
+| `requirements.txt` + FastAPI | Python    | ai-agent            |
+| `pyproject.toml` + LangChain | Python    | ai-agent            |
+| `mcp.json`                   | MCP       | mcp-server          |
+| `Dockerfile`                 | Custom    | custom              |
+
+## Wallet Setup
+
+On first run, `init` will:
+
+1. Check for existing wallet at `~/.morpheus/wallet.json`
+2. If not found, open browser for passkey authentication
+3. Create a new Coinbase Smart Wallet
+4. Save wallet configuration
+
+## Examples
+
+Create an AI agent project:
+
+```bash
+morpheus init --template ai-agent --name claude-agent
+```
+
+Create a website project:
+
+```bash
+morpheus init --template website --name landing-page
+```
+
+Create with all defaults:
+
+```bash
+morpheus init --yes
+```

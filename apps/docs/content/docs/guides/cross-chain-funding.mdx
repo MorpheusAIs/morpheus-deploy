@@ -1,0 +1,372 @@
+---
+title: Cross-Chain Funding
+description: Fund Akash deployments with USDC via Skip Go swaps
+---
+
+# Cross-Chain Funding Guide
+
+This guide explains how Morpheus automatically converts USDC on Base to AKT on Akash Network for your deployments using Skip Go Protocol.
+
+## Overview
+
+The funding flow:
+
+```
+USDC (Base) ──▶ Skip Go API ──▶ AKT (Akash)
+                   │
+              Axelar/IBC
+              Cross-Chain
+```
+
+You pay with USDC on Base (familiar, stable), and Morpheus handles the complexity of cross-chain swaps.
+
+## How It Works
+
+### 1. Fund Allocation
+
+When you deploy, your USDC is split:
+
+| Allocation       | Percentage | Purpose                  |
+| ---------------- | ---------- | ------------------------ |
+| AKT (Deployment) | 40%        | Akash escrow for compute |
+| MOR (Staking)    | 60%        | Yield generation         |
+
+```yaml
+# morpheus.yaml
+funding:
+  initialDeposit: 100.00 # $100 USDC
+  # Result:
+  # - $40 → AKT for deployment
+  # - $60 → MOR staking
+```
+
+### 2. Swap Execution
+
+Skip Go finds the optimal route:
+
+```
+Best Route Found:
+  USDC (Base) → USDC (Axelar) → AKT (Akash)
+
+  Estimated Output: 45.2 AKT
+  Fees: ~$0.50
+  Time: ~2-5 minutes
+```
+
+### 3. Deposit to Escrow
+
+AKT is automatically deposited to your Akash escrow account for the deployment.
+
+## Step-by-Step Guide
+
+### Step 1: Ensure USDC Balance
+
+Check your wallet has enough USDC:
+
+```bash
+morpheus wallet balance
+
+# Output:
+# Wallet: 0x1a2B3c...
+# Network: Base
+#
+# Balances:
+#   ETH:  0.1
+#   USDC: 150.00
+```
+
+### Step 2: Configure Funding
+
+Set your funding configuration in `morpheus.yaml`:
+
+```yaml
+funding:
+  source: smart-wallet
+  currency: USDC
+  initialDeposit: 50.00
+
+  # Optional: Custom split ratio
+  staking:
+    enabled: true
+    percentage: 60 # 60% to MOR staking
+
+  # Optional: Auto top-up
+  autoTopUp:
+    enabled: true
+    threshold: 0.10 # Top up when 10% remaining
+    amount: 25.00 # Add $25 each time
+```
+
+### Step 3: Deploy
+
+Run deployment:
+
+```bash
+morpheus deploy
+```
+
+Watch the funding flow:
+
+```
+Deployment Flow
+───────────────
+
+[1/5] Building image...
+      ✓ Image built: sha256:abc123
+
+[2/5] Pushing to registry...
+      ✓ Pushed to registry.akash.network
+
+[3/5] Funding deployment...
+      Initiating cross-chain swap via Skip Go
+
+      From: 50.00 USDC (Base)
+      To:   ~22.5 AKT (Akash)
+
+      Route: USDC → axlUSDC → AKT
+      Estimated time: 2-5 minutes
+
+      ⠋ Waiting for swap confirmation...
+      ✓ Swap complete! Received: 22.7 AKT
+
+      Depositing to Akash escrow...
+      ✓ Escrow funded: 22.7 AKT
+
+[4/5] Creating deployment...
+      ✓ Deployment created: DSEQ 12345678
+```
+
+## Manual Funding
+
+### Preview Swap Rate
+
+Before deploying, check the current rate:
+
+```bash
+morpheus fund --preview --amount 50
+
+# Output:
+# Swap Preview
+# ────────────
+# From:     50.00 USDC (Base)
+# To:       ~22.5 AKT (Akash)
+# Rate:     1 AKT = ~$2.22
+# Fees:     ~$0.45
+# Slippage: 0.5% max
+#
+# Route: USDC → axlUSDC → AKT
+# Providers: Skip Go, Axelar
+```
+
+### Fund Existing Deployment
+
+Add funds to a running deployment:
+
+```bash
+morpheus fund --amount 25 --dseq 12345678
+
+# Output:
+# Funding DSEQ 12345678...
+#
+# Swap: 25.00 USDC → 11.2 AKT
+# ✓ Escrow topped up: +11.2 AKT
+#
+# New escrow balance: 33.9 AKT
+# Estimated runway: ~14 days
+```
+
+## Skip Go Integration
+
+### How Skip Go Works
+
+Skip Go is a cross-chain DEX aggregator that:
+
+1. **Finds Best Routes** - Compares paths across multiple bridges/DEXs
+2. **Executes Atomically** - All-or-nothing swaps
+3. **Handles Complexity** - IBC, Axelar, Wormhole behind the scenes
+
+### Supported Routes
+
+| From            | To          | Bridge       |
+| --------------- | ----------- | ------------ |
+| USDC (Base)     | AKT (Akash) | Axelar + IBC |
+| USDC (Ethereum) | AKT (Akash) | Axelar + IBC |
+| USDC (Arbitrum) | AKT (Akash) | Axelar + IBC |
+
+### API Integration
+
+Morpheus uses the Skip Go API:
+
+```typescript
+// Get route quote
+const quote = await skipGo.getRoute({
+  sourceChainId: '8453', // Base
+  sourceAsset: USDC_ADDRESS,
+  destChainId: 'akashnet-2', // Akash
+  destAsset: 'uakt',
+  amount: '50000000', // 50 USDC (6 decimals)
+});
+
+// Execute swap
+const result = await skipGo.executeRoute(quote, wallet);
+```
+
+## Troubleshooting
+
+### "Insufficient USDC balance"
+
+```bash
+# Check balance
+morpheus wallet balance
+
+# If low, add USDC:
+# - Transfer from Coinbase
+# - Bridge from another chain
+# - Use testnet faucet (testnet only)
+```
+
+### "Swap failed"
+
+Possible causes:
+
+1. **High slippage** - Try during lower volatility
+2. **Route unavailable** - Bridge may be congested
+3. **Insufficient gas** - Ensure ETH for Base transaction
+
+```bash
+# Retry with higher slippage tolerance
+morpheus fund --amount 50 --slippage 1.0
+```
+
+### "Route not found"
+
+Skip Go couldn't find a path:
+
+```bash
+# Check available routes
+morpheus fund --show-routes
+
+# Try a different source chain
+morpheus fund --chain ethereum --amount 50
+```
+
+### "Transaction pending too long"
+
+Cross-chain swaps take time:
+
+```bash
+# Check swap status
+morpheus fund --status
+
+# Output:
+# Pending Swaps:
+# ──────────────
+# ID: swap_abc123
+# Status: Bridging (Axelar)
+# Progress: 2/3 confirmations
+# ETA: ~2 minutes
+```
+
+## Configuration Options
+
+### Full Funding Config
+
+```yaml
+funding:
+  source: smart-wallet
+  currency: USDC
+  initialDeposit: 100.00
+
+  # Swap settings
+  swap:
+    provider: skip-go
+    slippageTolerance: 0.5 # 0.5%
+    deadline: 600 # 10 minute timeout
+
+  # Staking allocation
+  staking:
+    enabled: true
+    percentage: 60
+
+  # Auto top-up
+  autoTopUp:
+    enabled: true
+    threshold: 0.10
+    amount: 50.00
+    maxPerDay: 200.00
+
+  # Alerts
+  alerts:
+    lowBalance: 10.00 # Warn when escrow < $10
+    email: alerts@example.com
+```
+
+### Environment Variables
+
+```bash
+# Override default swap provider
+export MORPHEUS_SWAP_PROVIDER=skip-go
+
+# Set custom slippage
+export MORPHEUS_SLIPPAGE=1.0
+
+# Use specific RPC for quotes
+export SKIP_GO_API_URL=https://api.skip.money
+```
+
+## Understanding Costs
+
+### Fee Breakdown
+
+| Component | Fee    | Description        |
+| --------- | ------ | ------------------ |
+| Skip Go   | 0.1%   | Swap routing fee   |
+| Axelar    | ~$0.20 | Bridge gas         |
+| Base Gas  | ~$0.05 | Source transaction |
+| Akash Gas | ~$0.01 | Escrow deposit     |
+
+**Example for $100 swap:**
+
+- Skip Go fee: $0.10
+- Bridge + gas: ~$0.30
+- **Total fees: ~$0.40** (0.4%)
+
+### Minimizing Costs
+
+1. **Batch funding** - Larger swaps have lower % fees
+2. **Off-peak times** - Gas is cheaper during low usage
+3. **Direct AKT** - If you have AKT, skip the swap entirely
+
+```yaml
+# Use AKT directly (skip swap fees)
+funding:
+  currency: AKT
+  initialDeposit: 50 # 50 AKT directly
+```
+
+## Testnet Funding
+
+For development, use testnet tokens:
+
+```yaml
+network: testnet
+
+funding:
+  source: smart-wallet
+  currency: USDC
+  initialDeposit: 100.00
+```
+
+Get testnet tokens:
+
+1. **Base Sepolia ETH**: [Coinbase Faucet](https://www.coinbase.com/faucets)
+2. **Testnet USDC**: [Circle Faucet](https://faucet.circle.com/)
+3. **Sandbox AKT**: [Akash Sandbox Faucet](https://faucet.sandbox-01.akash.network/)
+
+<Callout>Testnet swaps still work through Skip Go but use test tokens with no real value.</Callout>
+
+## Next Steps
+
+- [Configure Auto Top-Up](/docs/guides/auto-topup) - Never run out of funds
+- [MOR Staking Details](/docs/contracts/staking) - Understand yield generation
+- [GPU Deployments](/docs/guides/gpu-deployments) - Deploy AI workloads

@@ -1,22 +1,22 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Cpu,
+  ExternalLink,
   Github,
+  HardDrive,
+  Loader2,
+  Rocket,
   Terminal,
   Wallet,
-  ArrowRight,
-  ArrowLeft,
-  Cpu,
-  HardDrive,
   Zap,
-  Check,
-  Loader2,
-  ExternalLink,
-  Rocket,
 } from 'lucide-react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useState } from 'react';
 
 type Step = 'connect' | 'repo' | 'config' | 'deploy';
 
@@ -140,7 +140,9 @@ function RepoStep({
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAnalyze = async () => {
-    if (!config.repoUrl) return;
+    if (!config.repoUrl) {
+      return;
+    }
     setIsLoading(true);
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsLoading(false);
@@ -385,7 +387,13 @@ function ConfigStep({
   );
 }
 
-function DeployStep({ config, onBack }: { config: DeployConfig; onBack: () => void }) {
+function DeployStep({
+  config: _config,
+  onBack: _onBack,
+}: {
+  config: DeployConfig;
+  onBack: () => void;
+}) {
   const [status, setStatus] = useState<'deploying' | 'success'>('deploying');
   const [progress, setProgress] = useState(0);
 
@@ -485,7 +493,7 @@ function DeployStep({ config, onBack }: { config: DeployConfig; onBack: () => vo
   );
 }
 
-export default function DeployPage() {
+function DeployPageContent() {
   const searchParams = useSearchParams();
   const initialRepo = searchParams.get('repo') || '';
   const initialTemplate = (searchParams.get('template') || 'ai-agent') as DeployConfig['template'];
@@ -542,5 +550,19 @@ export default function DeployPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function DeployPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <Loader2 className="h-8 w-8 text-teal-500 animate-spin" />
+        </div>
+      }
+    >
+      <DeployPageContent />
+    </Suspense>
   );
 }

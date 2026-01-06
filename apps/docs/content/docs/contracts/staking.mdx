@@ -1,0 +1,367 @@
+---
+title: MOR Staking
+description: Stake MOR tokens for yield and platform benefits
+---
+
+# MOR Staking
+
+Morpheus enables staking MOR tokens on Base network for yield generation. A portion of deployment funds is automatically staked to MOR, providing passive income for users.
+
+## Overview
+
+The staking system:
+
+- **Auto-stake** - 60% of deployment funds go to MOR staking
+- **Yield Generation** - Earn rewards on staked tokens
+- **Lock Period** - Tokens locked for configurable duration
+- **Compound** - Rewards can be auto-compounded
+
+## Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                         User                                      │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │                 Smart Wallet (USDC)                          │ │
+│  │  ┌──────────────────────────────────────────────────────┐   │ │
+│  │  │  USDC Balance ──┬──▶ 40% → AKT (Deployment)          │   │ │
+│  │  │                 └──▶ 60% → MOR (Staking)             │   │ │
+│  │  └──────────────────────────────────────────────────────┘   │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                    MOR Staking Contract                          │
+│  ┌─────────────────────────────────────────────────────────────┐ │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │ │
+│  │  │   Stake     │  │   Shares    │  │     Rewards         │  │ │
+│  │  │  Position   │  │  Balance    │  │   Accumulator       │  │ │
+│  │  └─────────────┘  └─────────────┘  └─────────────────────┘  │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+## Installation
+
+```typescript
+import { MorpheusStaking } from '@morpheus-deploy/contracts';
+```
+
+## Connecting
+
+```typescript
+const staking = new MorpheusStaking(
+  {
+    network: 'testnet', // or 'mainnet'
+    rpcUrl: 'https://sepolia.base.org', // optional override
+  },
+  privateKey
+);
+```
+
+## Staking Operations
+
+### Stake MOR
+
+```typescript
+const amount = 100n * 10n ** 18n; // 100 MOR (18 decimals)
+
+const result = await staking.stake(amount);
+
+console.log(result);
+// {
+//   txHash: '0xabc123...',
+//   shares: 95000000000000000000n, // Shares received
+//   morphAmount: 100000000000000000000n // MOR staked
+// }
+```
+
+<Callout>
+  The stake function automatically approves the staking contract if needed. You don't need to call
+  approve separately.
+</Callout>
+
+### Unstake MOR
+
+```typescript
+// Unstake by shares (not MOR amount)
+const shares = 50n * 10n ** 18n;
+const txHash = await staking.unstake(shares);
+
+// Check how much MOR you'll receive
+const morAmount = await staking.sharesToMOR(shares);
+console.log(`Will receive: ${morAmount / 10n ** 18n} MOR`);
+```
+
+### Claim Rewards
+
+```typescript
+const { txHash, amount } = await staking.claimRewards();
+console.log(`Claimed: ${amount / 10n ** 18n} MOR`);
+```
+
+## Reading Positions
+
+### Your Position
+
+```typescript
+const position = await staking.getPosition(walletAddress);
+
+console.log(position);
+// {
+//   amount: 100000000000000000000n,    // 100 MOR staked
+//   shares: 95000000000000000000n,     // 95 shares
+//   rewards: 5000000000000000000n,     // 5 MOR pending
+//   lockedUntil: Date('2024-02-15')    // Lock expiry
+// }
+```
+
+### Protocol Stats
+
+```typescript
+// Total staked across all users
+const totalStaked = await staking.getTotalStaked();
+console.log(`Total staked: ${totalStaked / 10n ** 18n} MOR`);
+
+// Current APY
+const apy = await staking.getAPY();
+console.log(`Current APY: ${apy}%`);
+```
+
+### Share Conversion
+
+```typescript
+// Convert shares to MOR
+const shares = 100n * 10n ** 18n;
+const morValue = await staking.sharesToMOR(shares);
+console.log(`${shares} shares = ${morValue} MOR`);
+```
+
+## API Reference
+
+### StakeConfig
+
+```typescript
+interface StakeConfig {
+  network: 'mainnet' | 'testnet';
+  rpcUrl?: string;
+}
+```
+
+### StakePosition
+
+```typescript
+interface StakePosition {
+  amount: bigint; // MOR staked
+  shares: bigint; // Share balance
+  rewards: bigint; // Pending rewards
+  lockedUntil: Date; // Lock expiration
+}
+```
+
+### StakeResult
+
+```typescript
+interface StakeResult {
+  txHash: string;
+  shares: bigint;
+  morphAmount: bigint;
+}
+```
+
+### Methods
+
+| Method                 | Description                     |
+| ---------------------- | ------------------------------- |
+| `stake(amount)`        | Stake MOR tokens                |
+| `unstake(shares)`      | Unstake by share amount         |
+| `claimRewards()`       | Claim pending rewards           |
+| `getPosition(address)` | Get staking position            |
+| `getTotalStaked()`     | Total MOR staked in protocol    |
+| `getAPY()`             | Current annual percentage yield |
+| `sharesToMOR(shares)`  | Convert shares to MOR value     |
+
+## Contract Addresses
+
+| Network      | Staking Contract | MOR Token                                    |
+| ------------ | ---------------- | -------------------------------------------- |
+| Base Sepolia | `0x000...` (TBD) | `0x5c80ddd187054e1e4abbffcd750498e81d34ffa3` |
+| Base Mainnet | `0x000...` (TBD) | TBD                                          |
+
+<Callout type="warn">
+  Staking contract addresses are placeholders. The contracts need to be deployed before staking
+  functionality is available.
+</Callout>
+
+## Integration with Deployment Flow
+
+### Automatic Staking (Default)
+
+When you fund a deployment, Morpheus automatically splits funds:
+
+```yaml
+# morpheus.yaml
+funding:
+  source: smart-wallet
+  currency: USDC
+  initialDeposit: 100.00
+  staking:
+    enabled: true # Default: true
+    percentage: 60 # Default: 60%
+```
+
+**Flow:**
+
+1. $100 USDC deposited
+2. $40 → Swapped to AKT for deployment
+3. $60 → Swapped to MOR and staked
+
+### Manual Staking
+
+Disable auto-staking and manage manually:
+
+```yaml
+funding:
+  staking:
+    enabled: false
+```
+
+```typescript
+// Manually stake via SDK
+const staking = new MorpheusStaking({ network: 'testnet' }, privateKey);
+await staking.stake(amount);
+```
+
+## Shares vs Amount
+
+The staking contract uses a share-based system:
+
+- **Amount** - Actual MOR tokens
+- **Shares** - Proportional ownership of the pool
+
+As rewards accrue, each share becomes worth more MOR:
+
+```
+Initial:  100 shares = 100 MOR (1:1)
+After:    100 shares = 105 MOR (rewards accrued)
+```
+
+This is why `unstake` takes shares, not MOR amount:
+
+```typescript
+// Wrong approach (common mistake)
+const morToUnstake = 50n * 10n ** 18n;
+await staking.unstake(morToUnstake); // This is shares, not MOR!
+
+// Correct approach
+const position = await staking.getPosition(address);
+const sharesToUnstake = position.shares / 2n; // Half of shares
+await staking.unstake(sharesToUnstake);
+```
+
+## Lock Periods
+
+Staked tokens may have a lock period:
+
+```typescript
+const position = await staking.getPosition(address);
+
+if (position.lockedUntil > new Date()) {
+  console.log(`Locked until ${position.lockedUntil}`);
+  console.log('Cannot unstake yet');
+} else {
+  // Safe to unstake
+  await staking.unstake(position.shares);
+}
+```
+
+## Yield Strategies
+
+### Basic Staking
+
+Just stake and periodically claim rewards:
+
+```typescript
+// Stake
+await staking.stake(amount);
+
+// Periodically claim
+setInterval(
+  async () => {
+    const position = await staking.getPosition(address);
+    if (position.rewards > minRewardThreshold) {
+      await staking.claimRewards();
+    }
+  },
+  24 * 60 * 60 * 1000
+); // Daily
+```
+
+### Compound Strategy
+
+Claim and re-stake rewards for compound growth:
+
+```typescript
+async function compound() {
+  const { amount: rewards } = await staking.claimRewards();
+  if (rewards > 0n) {
+    await staking.stake(rewards);
+    console.log(`Compounded ${rewards / 10n ** 18n} MOR`);
+  }
+}
+```
+
+### Partial Unstaking
+
+Unstake only rewards, keep principal:
+
+```typescript
+const position = await staking.getPosition(address);
+
+// Calculate shares representing only rewards
+const principalMor = initialStakeAmount;
+const currentMor = await staking.sharesToMOR(position.shares);
+const rewardsMor = currentMor - principalMor;
+
+if (rewardsMor > 0n) {
+  // Calculate shares to unstake for just rewards
+  // This requires inverse calculation
+  const rewardShares = (position.shares * rewardsMor) / currentMor;
+  await staking.unstake(rewardShares);
+}
+```
+
+## Error Handling
+
+### Common Errors
+
+```typescript
+try {
+  await staking.stake(amount);
+} catch (error) {
+  if (error.message.includes('insufficient balance')) {
+    console.log('Not enough MOR tokens');
+  } else if (error.message.includes('allowance')) {
+    console.log('Token approval failed');
+  } else if (error.message.includes('locked')) {
+    console.log('Tokens are still locked');
+  }
+}
+```
+
+### Checking Before Operations
+
+```typescript
+// Check MOR balance before staking
+const morBalance = await getMORBalance(address);
+if (morBalance < amount) {
+  throw new Error(`Insufficient MOR: have ${morBalance}, need ${amount}`);
+}
+
+// Check lock before unstaking
+const position = await staking.getPosition(address);
+if (position.lockedUntil > new Date()) {
+  throw new Error(`Tokens locked until ${position.lockedUntil}`);
+}
+```

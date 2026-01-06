@@ -1,0 +1,237 @@
+---
+title: Templates
+description: Pre-configured deployment templates for common use cases
+---
+
+# Templates
+
+Morpheus provides pre-configured templates optimized for different workloads. Templates define default resources, sidecars, and configurations.
+
+## Available Templates
+
+### AI Agent
+
+GPU-enabled containers for AI inference and agent workloads.
+
+```yaml
+template: ai-agent
+```
+
+**Default Configuration:**
+
+| Resource | Default     | Notes                   |
+| -------- | ----------- | ----------------------- |
+| CPU      | 4 cores     | Optimized for inference |
+| Memory   | 8Gi         | Model loading headroom  |
+| Storage  | 20Gi        | Model weights storage   |
+| GPU      | RTX 4090 x1 | Optional, configurable  |
+
+**Includes:**
+
+- PostgreSQL sidecar for durable state
+- Vector sidecar for log shipping
+- Health check endpoint (`/health`)
+- Graceful shutdown handling
+
+**Best for:**
+
+- Claude/GPT-based agents
+- LangChain applications
+- Autonomous agents
+- Model serving endpoints
+
+### MCP Server
+
+Model Context Protocol servers for AI tool integration.
+
+```yaml
+template: mcp-server
+```
+
+**Default Configuration:**
+
+| Resource | Default | Notes                |
+| -------- | ------- | -------------------- |
+| CPU      | 2 cores | Tool execution       |
+| Memory   | 4Gi     | Context caching      |
+| Storage  | 10Gi    | Tool data            |
+| GPU      | None    | Not typically needed |
+
+**Includes:**
+
+- PostgreSQL sidecar
+- MCP transport configuration
+- Tool registration helpers
+
+**Best for:**
+
+- Custom MCP tools
+- Database connectors
+- API integrations
+- File system tools
+
+### Website
+
+Static and dynamic web applications.
+
+```yaml
+template: website
+```
+
+**Default Configuration:**
+
+| Resource | Default | Notes           |
+| -------- | ------- | --------------- |
+| CPU      | 1 core  | Static serving  |
+| Memory   | 1Gi     | SSR headroom    |
+| Storage  | 5Gi     | Build artifacts |
+| GPU      | None    | Not needed      |
+
+**Includes:**
+
+- Automatic framework detection
+- Static asset optimization
+- SSL/TLS termination
+
+**Supported Frameworks:**
+
+- Next.js (SSR/SSG)
+- Remix
+- Astro
+- Vite
+- Create React App
+- Static HTML
+
+**Best for:**
+
+- Landing pages
+- Dashboards
+- Documentation sites
+- Web applications
+
+### Custom
+
+Full control over deployment configuration.
+
+```yaml
+template: custom
+```
+
+**Default Configuration:**
+
+- No defaults - you specify everything
+- Full SDL control
+- Custom sidecars
+
+**Best for:**
+
+- Complex multi-container deployments
+- Non-standard workloads
+- Advanced configurations
+
+## Customizing Templates
+
+Override any template default in your `morpheus.yaml`:
+
+```yaml
+template: ai-agent
+
+resources:
+  cpu: 8 # Override CPU
+  memory: 16Gi # Override memory
+  gpu:
+    model: a100 # Use A100 instead of RTX 4090
+    count: 2 # Multiple GPUs
+
+runtime:
+  replicas: 3 # Scale horizontally
+```
+
+## Template Sidecars
+
+### PostgreSQL Sidecar
+
+Included with `ai-agent` and `mcp-server` templates:
+
+```yaml
+# Automatically configured
+services:
+  postgres:
+    image: postgres:16-alpine
+    resources:
+      cpu: 0.5
+      memory: 512Mi
+    env:
+      POSTGRES_DB: morpheus
+      POSTGRES_USER: morpheus
+      # Password auto-generated
+```
+
+Access from your app:
+
+```typescript
+const db = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+```
+
+### Vector Log Sidecar
+
+Included with all templates for log aggregation:
+
+```yaml
+services:
+  vector:
+    image: timberio/vector:0.34.0-alpine
+    resources:
+      cpu: 0.1
+      memory: 128Mi
+```
+
+Logs are automatically collected and can be streamed via `morpheus logs`.
+
+## Creating Custom Templates
+
+You can extend templates with custom configurations:
+
+```yaml
+template: ai-agent
+
+# Add custom sidecars
+sidecars:
+  redis:
+    image: redis:7-alpine
+    resources:
+      cpu: 0.5
+      memory: 256Mi
+    expose:
+      - port: 6379
+
+# Add custom profiles
+profiles:
+  high-memory:
+    resources:
+      memory: 32Gi
+  multi-gpu:
+    resources:
+      gpu:
+        count: 4
+```
+
+## GPU Models
+
+Available GPU models on Akash Network:
+
+| Model     | VRAM | Best For                  | Hourly Rate |
+| --------- | ---- | ------------------------- | ----------- |
+| RTX 4090  | 24GB | Most inference            | ~$0.50/hr   |
+| A100 40GB | 40GB | Large models              | ~$1.50/hr   |
+| A100 80GB | 80GB | 70B+ models               | ~$2.50/hr   |
+| H100      | 80GB | Training, large inference | ~$4.00/hr   |
+
+```yaml
+resources:
+  gpu:
+    model: a100-80gb
+    count: 1
+```

@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+const config = {
   reactStrictMode: true,
   transpilePackages: ['@morpheus-deploy/core', '@morpheus-deploy/contracts'],
 };
 
-module.exports = nextConfig;
+export default config;

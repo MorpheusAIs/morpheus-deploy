@@ -1,0 +1,170 @@
+---
+title: Blockchain Overview
+description: Multi-chain architecture for decentralized deployments
+---
+
+# Blockchain Integration
+
+Morpheus operates across multiple blockchain networks to enable decentralized, crypto-native deployments. This section covers the blockchain components that power the platform.
+
+## Multi-Chain Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Base Network (EVM)                          │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐  │
+│  │  Smart Wallet   │  │   MOR Staking   │  │      USDC       │  │
+│  │   (ERC-4337)    │  │    Contract     │  │    Payments     │  │
+│  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘  │
+└───────────│─────────────────────│─────────────────────│──────────┘
+            │                     │                     │
+            │                     │                     │
+            └─────────────────────┼─────────────────────┘
+                                  │
+                           ┌──────▼──────┐
+                           │  Skip Go    │
+                           │ Cross-Chain │
+                           │    Swap     │
+                           └──────┬──────┘
+                                  │
+┌─────────────────────────────────│────────────────────────────────┐
+│                      Akash Network (Cosmos)                      │
+│  ┌─────────────────┐  ┌────────▼────────┐  ┌─────────────────┐  │
+│  │  AuthZ Grants   │  │   Deployments   │  │    Escrow       │  │
+│  │ (Permissions)   │  │   & Leases      │  │   Accounts      │  │
+│  └─────────────────┘  └─────────────────┘  └─────────────────┘  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+## Components
+
+### Base Network (Mainnet & Sepolia Testnet)
+
+| Component                                    | Purpose                      | Network |
+| -------------------------------------------- | ---------------------------- | ------- |
+| [Smart Wallet](/docs/contracts/smart-wallet) | ERC-4337 account abstraction | Base    |
+| [MOR Staking](/docs/contracts/staking)       | Stake MOR for yield          | Base    |
+| USDC                                         | Payment currency             | Base    |
+
+### Akash Network (Mainnet & Sandbox Testnet)
+
+| Component                                   | Purpose                 | Network |
+| ------------------------------------------- | ----------------------- | ------- |
+| [AuthZ Grants](/docs/contracts/authz)       | Permission delegation   | Akash   |
+| [Deployments](/docs/contracts/akash-client) | Container orchestration | Akash   |
+| Escrow                                      | Lease payments          | Akash   |
+
+### Cross-Chain Bridge
+
+USDC on Base is swapped to AKT on Akash via Skip Go Protocol:
+
+```
+USDC (Base) → Skip Go API → AKT (Akash)
+```
+
+## Network Configuration
+
+### Mainnet
+
+| Network | Chain ID     | RPC                            |
+| ------- | ------------ | ------------------------------ |
+| Base    | 8453         | `https://mainnet.base.org`     |
+| Akash   | `akashnet-2` | `https://rpc.akashnet.net:443` |
+
+### Testnet
+
+| Network       | Chain ID     | RPC                                        |
+| ------------- | ------------ | ------------------------------------------ |
+| Base Sepolia  | 84532        | `https://sepolia.base.org`                 |
+| Akash Sandbox | `sandbox-01` | `https://rpc.sandbox-01.akash.network:443` |
+
+## Contract Addresses
+
+### Base Sepolia (Testnet)
+
+```typescript
+const TESTNET_ADDRESSES = {
+  USDC: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+  MOR: '0x5c80ddd187054e1e4abbffcd750498e81d34ffa3',
+  SmartWalletFactory: '0x0BA5ED0c6AA8c49038F819E587E2633c4A9F428a',
+};
+```
+
+### Base Mainnet
+
+```typescript
+const MAINNET_ADDRESSES = {
+  USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+  MOR: 'TBD', // To be deployed
+  SmartWalletFactory: '0x0BA5ED0c6AA8c49038F819E587E2633c4A9F428a',
+};
+```
+
+## Package Structure
+
+All blockchain integration code lives in `@morpheus-deploy/contracts`:
+
+```
+packages/contracts/
+├── src/
+│   ├── wallet/
+│   │   ├── smart-wallet.ts    # ERC-4337 Smart Wallet
+│   │   └── ephemeral-key.ts   # Time-limited keys
+│   ├── authz/
+│   │   ├── manager.ts         # AuthZ grant management
+│   │   └── messages.ts        # Cosmos message builders
+│   ├── staking/
+│   │   ├── morpheus.ts        # MOR staking client
+│   │   └── abi.ts             # Contract ABI & addresses
+│   ├── akash/
+│   │   ├── client.ts          # Akash deployment client
+│   │   └── messages.ts        # Akash message builders
+│   ├── constants.ts           # Chain configs, addresses
+│   └── types.ts               # TypeScript types
+└── package.json
+```
+
+## Installation
+
+```bash
+pnpm add @morpheus-deploy/contracts
+```
+
+## Usage
+
+```typescript
+import {
+  SmartWalletManager,
+  EphemeralKeyManager,
+  AuthZManager,
+  MorpheusStaking,
+  AkashClient,
+} from '@morpheus-deploy/contracts';
+
+// Create smart wallet
+const wallet = new SmartWalletManager({ network: 'testnet' });
+const walletInfo = await wallet.createSmartWallet();
+
+// Generate ephemeral key
+const ephemeral = new EphemeralKeyManager();
+const key = await ephemeral.generate(['deploy', 'status']);
+
+// Create AuthZ grant
+const authz = new AuthZManager();
+await authz.createDeploymentGrant(granterAddress, key.address);
+
+// Deploy to Akash
+const akash = new AkashClient({ network: 'testnet' });
+await akash.createDeployment({ owner, sdl, deposit });
+```
+
+## Security Model
+
+Morpheus uses a layered security approach:
+
+1. **Smart Wallet** - Passkey-based authentication, no seed phrases
+2. **Ephemeral Keys** - Time-limited keys that auto-expire
+3. **AuthZ Grants** - Minimal permissions, limited to deployment operations
+4. **Sealed Secrets** - ECIES encryption for environment variables
+
+See each component's documentation for detailed security information.

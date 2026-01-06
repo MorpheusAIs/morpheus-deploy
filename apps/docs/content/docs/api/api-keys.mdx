@@ -1,0 +1,252 @@
+---
+title: API Keys
+description: Create and manage API keys for programmatic access
+---
+
+# API Keys
+
+API keys provide programmatic access to the Morpheus API without requiring wallet signatures for each request. They're ideal for CI/CD pipelines, automation scripts, and server-to-server integrations.
+
+## Key Format
+
+API keys follow the format:
+
+```
+mor_sk_<32-character-string>
+```
+
+Example: `mor_sk_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6`
+
+## Permissions
+
+Each API key can be granted specific permissions:
+
+| Permission | Description                   |
+| ---------- | ----------------------------- |
+| `deploy`   | Create and update deployments |
+| `status`   | Read deployment status        |
+| `logs`     | Access deployment logs        |
+| `fund`     | Add funds to escrow           |
+| `admin`    | Full access (all permissions) |
+
+## Endpoints
+
+### Create API Key
+
+Creates a new API key. Requires wallet authentication (SIWE).
+
+```http
+POST /api/keys
+Authorization: Bearer <siwe_jwt>
+Content-Type: application/json
+```
+
+**Request Body:**
+
+```json
+{
+  "name": "CI/CD Pipeline",
+  "permissions": ["deploy", "status", "logs"],
+  "expiresAt": "2025-12-31T23:59:59Z"
+}
+```
+
+| Field         | Type     | Required | Description                 |
+| ------------- | -------- | -------- | --------------------------- |
+| `name`        | string   | Yes      | Human-readable key name     |
+| `permissions` | string[] | Yes      | Array of permission strings |
+| `expiresAt`   | string   | No       | ISO 8601 expiration date    |
+
+**Response:**
+
+```json
+{
+  "id": "key_abc123xyz789",
+  "key": "mor_sk_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
+  "name": "CI/CD Pipeline",
+  "prefix": "mor_sk_a1b2",
+  "permissions": ["deploy", "status", "logs"],
+  "createdAt": "2024-01-15T10:30:00Z",
+  "expiresAt": "2025-12-31T23:59:59Z"
+}
+```
+
+<Callout type="warn">
+  The full API key is only shown once at creation time. Store it securely - it cannot be retrieved
+  later.
+</Callout>
+
+### List API Keys
+
+Returns all API keys for the authenticated user.
+
+```http
+GET /api/keys
+Authorization: Bearer <api_key_or_jwt>
+```
+
+**Response:**
+
+```json
+{
+  "keys": [
+    {
+      "id": "key_abc123xyz789",
+      "name": "CI/CD Pipeline",
+      "prefix": "mor_sk_a1b2",
+      "permissions": ["deploy", "status", "logs"],
+      "lastUsedAt": "2024-01-15T14:22:00Z",
+      "createdAt": "2024-01-15T10:30:00Z",
+      "expiresAt": "2025-12-31T23:59:59Z"
+    },
+    {
+      "id": "key_def456uvw012",
+      "name": "Monitoring Script",
+      "prefix": "mor_sk_x9y8",
+      "permissions": ["status", "logs"],
+      "lastUsedAt": "2024-01-15T15:00:00Z",
+      "createdAt": "2024-01-10T09:00:00Z",
+      "expiresAt": null
+    }
+  ]
+}
+```
+
+### Revoke API Key
+
+Immediately revokes an API key. Requires wallet authentication.
+
+```http
+DELETE /api/keys/:id
+Authorization: Bearer <siwe_jwt>
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "id": "key_abc123xyz789",
+  "revokedAt": "2024-01-15T16:00:00Z"
+}
+```
+
+## Usage Examples
+
+### Using API Key in Requests
+
+```bash
+# Create a deployment
+curl -X POST https://api.morpheus.network/api/deploy \
+  -H "Authorization: Bearer mor_sk_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "repoUrl": "github.com/user/repo",
+    "template": "ai-agent"
+  }'
+```
+
+### GitHub Actions Integration
+
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy to Morpheus
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Morpheus
+        run: |
+          curl -X POST https://api.morpheus.network/api/deploy \
+            -H "Authorization: Bearer ${{ secrets.MORPHEUS_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "repoUrl": "${{ github.repository }}",
+              "branch": "${{ github.ref_name }}",
+              "template": "ai-agent"
+            }'
+```
+
+### Environment Variables
+
+```bash
+# Set in your environment
+export MORPHEUS_API_KEY="mor_sk_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+
+# Use in scripts
+curl -X GET https://api.morpheus.network/api/deployments \
+  -H "Authorization: Bearer $MORPHEUS_API_KEY"
+```
+
+## Security Best Practices
+
+### Principle of Least Privilege
+
+Grant only the permissions needed:
+
+```json
+{
+  "name": "Read-only Monitor",
+  "permissions": ["status", "logs"]
+}
+```
+
+### Set Expiration Dates
+
+For temporary access, set an expiration:
+
+```json
+{
+  "name": "Contractor Access",
+  "permissions": ["deploy", "status"],
+  "expiresAt": "2024-03-01T00:00:00Z"
+}
+```
+
+### Rotate Keys Regularly
+
+Create new keys and revoke old ones periodically:
+
+```bash
+# Create new key
+NEW_KEY=$(curl -X POST https://api.morpheus.network/api/keys \
+  -H "Authorization: Bearer $WALLET_JWT" \
+  -d '{"name": "Production v2", "permissions": ["deploy"]}' \
+  | jq -r '.key')
+
+# Update your secrets
+gh secret set MORPHEUS_API_KEY --body "$NEW_KEY"
+
+# Revoke old key
+curl -X DELETE https://api.morpheus.network/api/keys/key_old123 \
+  -H "Authorization: Bearer $WALLET_JWT"
+```
+
+### Never Commit Keys
+
+Add to `.gitignore`:
+
+```gitignore
+# Morpheus
+.morpheus/
+*.morpheus.key
+```
+
+Use environment variables or secret managers instead.
+
+## Error Codes
+
+| Code                   | HTTP Status | Description                    |
+| ---------------------- | ----------- | ------------------------------ |
+| `UNAUTHORIZED`         | 401         | Invalid or expired API key     |
+| `FORBIDDEN`            | 403         | Key lacks required permission  |
+| `KEY_EXPIRED`          | 401         | API key has expired            |
+| `KEY_REVOKED`          | 401         | API key was revoked            |
+| `WALLET_AUTH_REQUIRED` | 403         | Operation requires wallet auth |

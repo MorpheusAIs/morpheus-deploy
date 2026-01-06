@@ -1,0 +1,186 @@
+---
+title: morpheus deploy
+description: Deploy your application to Akash Network
+---
+
+# morpheus deploy
+
+Deploy your application to Akash Network. This command builds your container, synthesizes SDL, and creates a deployment.
+
+## Usage
+
+```bash
+morpheus deploy [options]
+```
+
+## Options
+
+| Option         | Description                                       |
+| -------------- | ------------------------------------------------- |
+| `--dry-run`    | Preview deployment without executing              |
+| `--skip-build` | Use existing image, skip Docker build             |
+| `--skip-push`  | Skip pushing to registry (use with --skip-build)  |
+| `--image`      | Specify a custom image to deploy                  |
+| `--provider`   | Preferred provider address                        |
+| `--wait`       | Wait for deployment to be healthy (default: true) |
+| `--timeout`    | Deployment timeout in seconds (default: 300)      |
+
+## Deployment Process
+
+When you run `morpheus deploy`, the following steps occur:
+
+### 1. Configuration Validation
+
+```
+Validating morpheus.yaml...
+✓ Configuration valid
+```
+
+### 2. Docker Build
+
+```
+Building container...
+[+] Building 45.2s (12/12) FINISHED
+ => [internal] load build definition from Dockerfile
+ => [internal] load .dockerignore
+ => [1/8] FROM node:20-alpine
+ => [2/8] WORKDIR /app
+ => [3/8] COPY package*.json ./
+ => [4/8] RUN npm ci --only=production
+ => [5/8] COPY . .
+ => [6/8] RUN npm run build
+ => exporting to image
+✓ Image built: my-agent:latest
+```
+
+### 3. Registry Push
+
+```
+Pushing to registry...
+Pushing ghcr.io/user/my-agent:latest...
+✓ Pushed successfully
+```
+
+### 4. SDL Synthesis
+
+```
+Synthesizing Akash SDL...
+✓ SDL generated with 3 services
+  - agent (4 CPU, 8Gi RAM, 1x RTX 4090)
+  - postgres (0.5 CPU, 512Mi RAM)
+  - vector (0.1 CPU, 128Mi RAM)
+```
+
+### 5. Funding
+
+```
+Checking wallet balance...
+Swapping 10.00 USDC → AKT...
+✓ Swapped to 3.21 AKT ($10.00)
+```
+
+### 6. Deployment Creation
+
+```
+Creating deployment...
+Transaction: 0xabc123...
+DSEQ: 12345678
+✓ Deployment created
+```
+
+### 7. Bid Selection
+
+```
+Waiting for provider bids...
+Received 5 bids:
+  1. akash1provider... - 0.0015 AKT/block (best)
+  2. akash1another...  - 0.0018 AKT/block
+  3. ...
+Selecting best bid...
+✓ Lease created with akash1provider...
+```
+
+### 8. Manifest Deployment
+
+```
+Sending manifest...
+✓ Manifest accepted
+
+Waiting for deployment to be healthy...
+✓ Health check passed
+
+Deployment live!
+URL: https://abc123.akash.network
+DSEQ: 12345678
+```
+
+## Dry Run
+
+Preview what would happen without deploying:
+
+```bash
+morpheus deploy --dry-run
+```
+
+This outputs:
+
+- Validated configuration
+- Generated SDL
+- Estimated costs
+- No actual deployment
+
+## Using Custom Images
+
+Deploy a pre-built image:
+
+```bash
+morpheus deploy --image ghcr.io/user/my-agent:v1.2.3
+```
+
+Skip both build and push:
+
+```bash
+morpheus deploy --skip-build --skip-push --image my-registry/my-image:tag
+```
+
+## Provider Selection
+
+Prefer a specific provider:
+
+```bash
+morpheus deploy --provider akash1abc123...
+```
+
+## Timeouts
+
+Adjust the deployment timeout:
+
+```bash
+morpheus deploy --timeout 600  # 10 minutes
+```
+
+## Examples
+
+Standard deployment:
+
+```bash
+morpheus deploy
+```
+
+Quick redeploy with existing image:
+
+```bash
+morpheus deploy --skip-build
+```
+
+Preview before deploying:
+
+```bash
+morpheus deploy --dry-run
+```
+
+Deploy to testnet:
+
+```bash
+morpheus deploy --network testnet
+```

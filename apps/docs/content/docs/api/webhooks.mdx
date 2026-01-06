@@ -1,0 +1,383 @@
+---
+title: Webhooks
+description: GitHub webhook integration for automated deployments
+---
+
+# Webhooks
+
+Morpheus supports GitHub webhooks for automated deployments on push events and preview deployments for pull requests.
+
+## GitHub Webhook
+
+The GitHub webhook endpoint handles repository events to trigger automated deployments.
+
+### Endpoint
+
+```http
+POST /api/webhooks/github
+```
+
+### Headers
+
+GitHub sends these headers with each webhook:
+
+| Header                | Description                                 |
+| --------------------- | ------------------------------------------- |
+| `X-GitHub-Event`      | Event type (`push`, `pull_request`, `ping`) |
+| `X-GitHub-Delivery`   | Unique delivery ID                          |
+| `X-Hub-Signature-256` | HMAC-SHA256 signature                       |
+
+### Signature Verification
+
+All webhook requests are verified using HMAC-SHA256:
+
+```typescript
+// Signature format
+const signature = `sha256=${hmac(webhookSecret, requestBody)}`;
+
+// Verification
+if (request.headers['X-Hub-Signature-256'] !== expectedSignature) {
+  return { error: 'Invalid signature', status: 401 };
+}
+```
+
+### Supported Events
+
+#### Push Event
+
+Triggered when commits are pushed to a branch.
+
+**Behavior:**
+
+- Pushes to the default branch trigger a production deployment
+- Pushes to other branches are ignored (unless configured otherwise)
+
+**Payload (relevant fields):**
+
+```json
+{
+  "ref": "refs/heads/main",
+  "repository": {
+    "full_name": "user/repo",
+    "default_branch": "main"
+  },
+  "commits": [
+    {
+      "id": "abc123",
+      "message": "feat: add new feature",
+      "author": {
+        "name": "Developer",
+        "email": "dev@example.com"
+      }
+    }
+  ],
+  "pusher": {
+    "name": "developer",
+    "email": "dev@example.com"
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "received": true,
+  "event": "push",
+  "deliveryId": "abc123-def456",
+  "deployment": {
+    "triggered": true,
+    "branch": "main",
+    "dseq": "12345678"
+  }
+}
+```
+
+#### Pull Request Event
+
+Triggered on pull request activity.
+
+**Actions handled:**
+
+- `opened` - New PR opened, creates preview deployment
+- `synchronize` - New commits pushed, updates preview deployment
+- `closed` - PR closed/merged, destroys preview deployment
+
+**Payload (relevant fields):**
+
+```json
+{
+  "action": "opened",
+  "number": 42,
+  "pull_request": {
+    "number": 42,
+    "title": "Add new feature",
+    "head": {
+      "ref": "feature-branch",
+      "sha": "abc123"
+    },
+    "base": {
+      "ref": "main"
+    }
+  },
+  "repository": {
+    "full_name": "user/repo"
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "received": true,
+  "event": "pull_request",
+  "deliveryId": "xyz789",
+  "preview": {
+    "url": "https://pr-42.preview.morpheus.network",
+    "prNumber": 42
+  }
+}
+```
+
+#### Ping Event
+
+Sent when the webhook is first configured. Used to verify connectivity.
+
+**Response:**
+
+```json
+{
+  "received": true,
+  "event": "ping",
+  "deliveryId": "ping123"
+}
+```
+
+## Setup Guide
+
+### 1. Get Your Webhook Secret
+
+Generate a webhook secret in your Morpheus dashboard:
+
+```bash
+# Via CLI
+morpheus webhooks create --repo github.com/user/repo
+
+# Output
+Webhook URL: https://api.morpheus.network/api/webhooks/github
+Secret: whsec_abc123xyz...
+```
+
+### 2. Configure GitHub Repository
+
+1. Go to your repository on GitHub
+2. Navigate to **Settings** > **Webhooks** > **Add webhook**
+3. Configure:
+
+| Field        | Value                                              |
+| ------------ | -------------------------------------------------- |
+| Payload URL  | `https://api.morpheus.network/api/webhooks/github` |
+| Content type | `application/json`                                 |
+| Secret       | Your webhook secret from step 1                    |
+| Events       | Select "Just the push event" or customize          |
+
+### 3. Select Events
+
+For automated deployments, select:
+
+- **Push** - For production deployments on main branch
+- **Pull requests** - For preview deployments on PRs
+
+### 4. Verify Setup
+
+GitHub sends a `ping` event when you save the webhook. Check for:
+
+- Status: 200 OK
+- Response: `{"received": true, "event": "ping"}`
+
+## Configuration
+
+### Environment Variables
+
+Set in your deployment environment:
+
+```bash
+# Required
+GITHUB_WEBHOOK_SECRET=whsec_your_secret_here
+
+# Optional: GitHub App for enhanced features
+GITHUB_APP_ID=12345
+GITHUB_PRIVATE_KEY_PATH=/path/to/private-key.pem
+```
+
+### Branch Filtering
+
+Configure which branches trigger deployments in `morpheus.yaml`:
+
+```yaml
+# morpheus.yaml
+project:
+  name: my-app
+
+deploy:
+  branches:
+    production: main # Deploy to production on main
+    staging: develop # Deploy to staging on develop
+    preview: 'pr-*' # Preview deployments for PRs
+```
+
+### Deployment Status Updates
+
+Morpheus can update GitHub commit statuses:
+
+```yaml
+# morpheus.yaml
+webhooks:
+  github:
+    statusUpdates: true # Update commit status
+    comments: true # Comment on PRs with preview URL
+```
+
+## Security
+
+### Signature Verification
+
+All webhooks are verified using HMAC-SHA256. Never disable signature verification.
+
+```typescript
+// How Morpheus verifies signatures
+async function verifyGitHubSignature(
+  body: string,
+  signature: string,
+  secret: string
+): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+
+  const signatureBuffer = await crypto.subtle.sign('HMAC', key, encoder.encode(body));
+
+  const expectedSignature = `sha256=${toHex(signatureBuffer)}`;
+  return timingSafeEqual(signature, expectedSignature);
+}
+```
+
+### IP Allowlisting
+
+GitHub webhook requests come from specific IP ranges. While Morpheus validates signatures, you can also allowlist GitHub's IPs:
+
+```bash
+# Get GitHub's webhook IPs
+curl https://api.github.com/meta | jq '.hooks'
+```
+
+### Secret Rotation
+
+Rotate webhook secrets periodically:
+
+1. Generate new secret in Morpheus dashboard
+2. Add new secret to GitHub (both old and new work during transition)
+3. Remove old secret from GitHub after confirming new works
+
+## Troubleshooting
+
+### Webhook Not Triggering
+
+1. **Check webhook delivery history** in GitHub Settings > Webhooks
+2. **Verify signature** - Ensure secret matches between GitHub and Morpheus
+3. **Check branch** - Only configured branches trigger deployments
+
+### Deployment Not Starting
+
+```bash
+# Check webhook logs
+morpheus logs --type webhook --repo github.com/user/repo
+
+# Verify configuration
+morpheus config show
+```
+
+### Preview Deployment Not Appearing
+
+1. Verify `pull_request` events are enabled
+2. Check that the PR is against the correct base branch
+3. Ensure the repository is connected in Morpheus dashboard
+
+## Error Responses
+
+| Status | Error                  | Description                       |
+| ------ | ---------------------- | --------------------------------- |
+| 401    | `Invalid signature`    | HMAC verification failed          |
+| 400    | `Missing event header` | X-GitHub-Event not provided       |
+| 400    | `Invalid payload`      | Malformed JSON body               |
+| 404    | `Repository not found` | Repo not registered with Morpheus |
+| 500    | `Deployment failed`    | Internal error during deployment  |
+
+## Event Examples
+
+### Successful Push Deployment
+
+```bash
+# GitHub sends
+POST /api/webhooks/github
+X-GitHub-Event: push
+X-Hub-Signature-256: sha256=abc123...
+
+{
+  "ref": "refs/heads/main",
+  "repository": {"full_name": "user/repo"}
+}
+
+# Morpheus responds
+HTTP/1.1 200 OK
+{
+  "received": true,
+  "event": "push",
+  "deployment": {
+    "triggered": true,
+    "dseq": "12345678"
+  }
+}
+```
+
+### Preview Deployment on PR
+
+```bash
+# GitHub sends
+POST /api/webhooks/github
+X-GitHub-Event: pull_request
+
+{
+  "action": "opened",
+  "number": 42,
+  "pull_request": {
+    "head": {"ref": "feature-x"}
+  }
+}
+
+# Morpheus responds
+HTTP/1.1 200 OK
+{
+  "received": true,
+  "event": "pull_request",
+  "preview": {
+    "url": "https://pr-42.preview.morpheus.network"
+  }
+}
+```
+
+## Rate Limits
+
+Webhook processing is rate-limited per repository:
+
+| Tier       | Webhooks/Minute | Concurrent Deployments |
+| ---------- | --------------- | ---------------------- |
+| Free       | 10              | 1                      |
+| Pro        | 60              | 5                      |
+| Enterprise | 300             | 20                     |

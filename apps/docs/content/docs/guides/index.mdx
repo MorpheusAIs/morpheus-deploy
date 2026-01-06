@@ -1,0 +1,97 @@
+---
+title: Guides Overview
+description: Step-by-step tutorials for Morpheus features
+---
+
+# Guides
+
+These guides walk you through specific Morpheus features and workflows in detail.
+
+## Getting Started
+
+| Guide                                                   | Description                                          | Time   |
+| ------------------------------------------------------- | ---------------------------------------------------- | ------ |
+| [Wallet Setup](/docs/guides/wallet-setup)               | Set up your Smart Wallet with passkey authentication | 5 min  |
+| [Cross-Chain Funding](/docs/guides/cross-chain-funding) | Fund deployments with USDC via Skip Go swaps         | 10 min |
+
+## Security
+
+| Guide                                         | Description                              | Time   |
+| --------------------------------------------- | ---------------------------------------- | ------ |
+| [Sealed Secrets](/docs/guides/sealed-secrets) | Encrypt environment variables with ECIES | 10 min |
+| [Auto Top-Up](/docs/guides/auto-topup)        | Configure automatic escrow replenishment | 5 min  |
+
+## Advanced Deployments
+
+| Guide                                           | Description                               | Time   |
+| ----------------------------------------------- | ----------------------------------------- | ------ |
+| [GPU Deployments](/docs/guides/gpu-deployments) | Deploy AI workloads with GPU acceleration | 15 min |
+
+## Quick Reference
+
+### Common Tasks
+
+```bash
+# Initialize a new project
+morpheus init --template ai-agent
+
+# Deploy to Akash
+morpheus deploy
+
+# Check deployment status
+morpheus status
+
+# Stream logs
+morpheus logs
+
+# Add funds to escrow
+morpheus fund --amount 10
+```
+
+### Environment Variables
+
+| Variable               | Description                           |
+| ---------------------- | ------------------------------------- |
+| `MORPHEUS_WALLET_PATH` | Custom wallet storage location        |
+| `MORPHEUS_NETWORK`     | Default network (`mainnet`/`testnet`) |
+| `AKASH_NODE`           | Custom Akash RPC endpoint             |
+| `BASE_RPC_URL`         | Custom Base RPC endpoint              |
+
+### Configuration File Locations
+
+| File                             | Purpose                  |
+| -------------------------------- | ------------------------ |
+| `morpheus.yaml`                  | Project configuration    |
+| `~/.morpheus/wallet.json`        | Smart Wallet credentials |
+| `~/.morpheus/ephemeral-key.json` | Current ephemeral key    |
+| `~/.morpheus/config.json`        | CLI settings             |
+
+## Troubleshooting
+
+### Deployment Issues
+
+1. **No bids received** - Your resource requirements may be too demanding. Try reducing GPU requirements or using a different region.
+
+2. **Lease creation failed** - Ensure your escrow has enough AKT. Check with `morpheus status`.
+
+3. **Manifest rejected** - Verify your `morpheus.yaml` is valid and all environment variables are set.
+
+### Wallet Issues
+
+1. **Passkey not recognized** - Try re-authenticating or check if your device supports WebAuthn.
+
+2. **Insufficient funds** - Add USDC to your Smart Wallet address on Base.
+
+3. **Transaction failed** - Check gas prices and retry, or try testnet first.
+
+### Network Issues
+
+1. **RPC timeout** - The RPC endpoint may be overloaded. Try a custom endpoint.
+
+2. **Chain ID mismatch** - Ensure you're connecting to the correct network (mainnet vs testnet).
+
+## Getting Help
+
+- **GitHub Issues**: [github.com/morpheus-deploy/morpheus-deploy/issues](https://github.com/morpheus-deploy/morpheus-deploy/issues)
+- **Discord**: [discord.gg/morpheus](https://discord.gg/morpheus)
+- **Twitter**: [@morpheusdeploy](https://twitter.com/morpheusdeploy)

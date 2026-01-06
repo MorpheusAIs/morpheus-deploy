@@ -1,0 +1,376 @@
+---
+title: Ephemeral Keys
+description: Time-limited keys for secure deployment operations
+---
+
+# Ephemeral Keys
+
+Ephemeral keys are short-lived cryptographic keys that provide time-limited access to deployment operations. They minimize security risk by automatically expiring and having limited permissions.
+
+## Overview
+
+Instead of using your main wallet for every operation, Morpheus generates ephemeral keys that:
+
+- **Auto-expire** after 24 hours (configurable)
+- **Limited scope** - Only deployment permissions via AuthZ
+- **Local encryption** - Private keys encrypted at rest
+- **Easy revocation** - Delete anytime, even before expiry
+
+## Security Model
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                        Smart Wallet                               │
+│                    (Long-lived, Secure)                          │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │                    Grants AuthZ to:                        │  │
+│  └────────────────────────────────────────────────────────────┘  │
+│                              │                                    │
+│                              ▼                                    │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │                   Ephemeral Key                            │  │
+│  │              (Short-lived, Limited)                        │  │
+│  │                                                            │  │
+│  │  Permissions:                                              │  │
+│  │  ├─ MsgCreateDeployment                                    │  │
+│  │  ├─ MsgUpdateDeployment                                    │  │
+│  │  ├─ MsgCloseDeployment                                     │  │
+│  │  ├─ MsgDepositDeployment                                   │  │
+│  │  └─ MsgCreateLease                                         │  │
+│  │                                                            │  │
+│  │  Expires: 24 hours                                         │  │
+│  └────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+## Installation
+
+```typescript
+import { EphemeralKeyManager } from '@morpheus-deploy/contracts';
+```
+
+## Generating Keys
+
+### Basic Generation
+
+```typescript
+const manager = new EphemeralKeyManager();
+
+const permissions = [
+  '/akash.deployment.v1beta3.MsgCreateDeployment',
+  '/akash.deployment.v1beta3.MsgUpdateDeployment',
+  '/akash.deployment.v1beta3.MsgCloseDeployment',
+];
+
+const keyData = await manager.generate(permissions);
+
+console.log(keyData);
+// {
+//   address: 'akash1abc...',
+//   publicKey: '0x...',
+//   encryptedPrivateKey: '...',
+//   salt: '...',
+//   iv: '...',
+//   createdAt: '2024-01-15T10:00:00Z',
+//   expiresAt: '2024-01-16T10:00:00Z',
+//   permissions: [...]
+// }
+```
+
+### Custom Configuration
+
+```typescript
+const manager = new EphemeralKeyManager({
+  storageDir: '/custom/path/.morpheus',
+  expirationHours: 48, // 2 days instead of 24
+});
+```
+
+## Loading Existing Keys
+
+```typescript
+const manager = new EphemeralKeyManager();
+
+const keyData = await manager.load();
+
+if (!keyData) {
+  console.log('No valid key found, generating new one...');
+  await manager.generate(permissions);
+} else {
+  console.log(`Key expires in ${manager.getTimeRemaining() / 1000 / 60} minutes`);
+}
+```
+
+## Using Keys for Signing
+
+```typescript
+// Get the viem account for signing
+const account = manager.getAccount();
+
+// Use with viem wallet client
+const walletClient = createWalletClient({
+  account,
+  chain: akashChain,
+  transport: http(rpcUrl),
+});
+
+// Sign transaction
+const signature = await account.signMessage({ message: 'Hello' });
+```
+
+## Key Lifecycle
+
+### 1. Generation
+
+```typescript
+// Keys are generated and stored encrypted
+const keyData = await manager.generate(permissions);
+```
+
+### 2. AuthZ Grant
+
+After generation, create an AuthZ grant from your main wallet:
+
+```typescript
+import { AuthZManager } from '@morpheus-deploy/contracts';
+
+const authz = new AuthZManager();
+await authz.connect(mainWalletMnemonic);
+
+const grant = await authz.createDeploymentGrant(mainWalletAddress, keyData.address);
+
+// Record the grant transaction
+await manager.recordGrant(grant.txHash);
+```
+
+### 3. Usage
+
+```typescript
+// Load key when needed
+await manager.load();
+
+// Check permissions before use
+if (manager.hasPermission('/akash.deployment.v1beta3.MsgCreateDeployment')) {
+  // Proceed with deployment
+}
+```
+
+### 4. Expiration
+
+Keys automatically become invalid after expiration:
+
+```typescript
+if (manager.isExpired()) {
+  console.log('Key expired, generating new one...');
+  await manager.generate(permissions);
+}
+```
+
+### 5. Revocation
+
+Manually revoke keys when no longer needed:
+
+```typescript
+await manager.revoke();
+// Deletes ~/.morpheus/ephemeral-key.json
+```
+
+## API Reference
+
+### EphemeralKeyConfig
+
+```typescript
+interface EphemeralKeyConfig {
+  storageDir?: string; // Default: ~/.morpheus
+  expirationHours?: number; // Default: 24
+}
+```
+
+### EphemeralKeyData
+
+```typescript
+interface EphemeralKeyData {
+  address: string; // Akash address (akash1...)
+  publicKey: string; // Hex-encoded public key
+  encryptedPrivateKey: string; // AES-256-GCM encrypted
+  salt: string; // Encryption salt
+  iv: string; // Initialization vector
+  createdAt: string; // ISO 8601 timestamp
+  expiresAt: string; // ISO 8601 timestamp
+  permissions: string[]; // Cosmos message types
+  grantTxHash?: string; // AuthZ grant transaction
+}
+```
+
+### Methods
+
+| Method                  | Description                          |
+| ----------------------- | ------------------------------------ |
+| `generate(permissions)` | Create new ephemeral key             |
+| `load()`                | Load existing key from storage       |
+| `getAccount()`          | Get viem account for signing         |
+| `isExpired()`           | Check if key has expired             |
+| `hasPermission(perm)`   | Check if key has specific permission |
+| `recordGrant(txHash)`   | Store AuthZ grant transaction hash   |
+| `revoke()`              | Delete key from storage              |
+| `getTimeRemaining()`    | Milliseconds until expiration        |
+| `extend(hours)`         | Extend expiration time               |
+
+## Storage & Encryption
+
+### File Location
+
+Keys are stored in `~/.morpheus/ephemeral-key.json`:
+
+```json
+{
+  "address": "akash1abc...",
+  "publicKey": "0x04...",
+  "encryptedPrivateKey": "a1b2c3...",
+  "salt": "d4e5f6...",
+  "iv": "789abc...",
+  "createdAt": "2024-01-15T10:00:00.000Z",
+  "expiresAt": "2024-01-16T10:00:00.000Z",
+  "permissions": ["/akash.deployment.v1beta3.MsgCreateDeployment"],
+  "grantTxHash": "ABC123..."
+}
+```
+
+### Encryption Details
+
+Private keys are encrypted using:
+
+- **Algorithm**: AES-256-GCM
+- **Key Derivation**: scrypt (N=32768, r=8, p=1)
+- **Password**: Machine-specific identifier
+
+```typescript
+// Encryption process
+const salt = randomBytes(16);
+const iv = randomBytes(16);
+const key = scryptSync(password, salt, 32);
+const cipher = createCipheriv('aes-256-gcm', key, iv);
+```
+
+## Best Practices
+
+### 1. Short Expiration Times
+
+Use the shortest expiration that works for your use case:
+
+```typescript
+// For CI/CD: 1 hour
+const manager = new EphemeralKeyManager({ expirationHours: 1 });
+
+// For development: 24 hours (default)
+const manager = new EphemeralKeyManager();
+
+// For long-running processes: 48 hours max
+const manager = new EphemeralKeyManager({ expirationHours: 48 });
+```
+
+### 2. Minimal Permissions
+
+Only grant permissions that are actually needed:
+
+```typescript
+// Bad: All permissions
+const permissions = ['*'];
+
+// Good: Specific permissions
+const permissions = [
+  '/akash.deployment.v1beta3.MsgCreateDeployment',
+  '/akash.deployment.v1beta3.MsgCloseDeployment',
+];
+```
+
+### 3. Revoke After Use
+
+For one-time operations, revoke immediately after:
+
+```typescript
+try {
+  await performDeployment();
+} finally {
+  await manager.revoke();
+}
+```
+
+### 4. Monitor Expiration
+
+Check remaining time before operations:
+
+```typescript
+const remaining = manager.getTimeRemaining();
+const fiveMinutes = 5 * 60 * 1000;
+
+if (remaining < fiveMinutes) {
+  console.log('Key expiring soon, generating new one...');
+  await manager.revoke();
+  await manager.generate(permissions);
+  await createNewAuthZGrant();
+}
+```
+
+## Integration with CLI
+
+The Morpheus CLI manages ephemeral keys automatically:
+
+```bash
+# Check key status
+morpheus key status
+
+# Output:
+# Ephemeral Key Status
+# ────────────────────
+# Address:    akash1abc...
+# Created:    2024-01-15 10:00:00
+# Expires:    2024-01-16 10:00:00
+# Remaining:  23h 45m
+# AuthZ:      Active (tx: ABC123...)
+
+# Manually rotate key
+morpheus key rotate
+
+# Revoke key
+morpheus key revoke
+```
+
+## Troubleshooting
+
+### "Ephemeral key not loaded"
+
+```typescript
+// Always call load() before getAccount()
+const manager = new EphemeralKeyManager();
+await manager.load(); // Don't forget this!
+const account = manager.getAccount();
+```
+
+### "Key expired"
+
+```typescript
+const manager = new EphemeralKeyManager();
+const keyData = await manager.load();
+
+if (!keyData || manager.isExpired()) {
+  // Generate new key
+  await manager.generate(permissions);
+  // Create new AuthZ grant
+  await createAuthZGrant(manager.getAccount().address);
+}
+```
+
+### Permission Denied on Akash
+
+Ensure the AuthZ grant includes the required message type:
+
+```typescript
+// Check what permissions the key has
+console.log(keyData.permissions);
+
+// Verify AuthZ grant exists
+const authz = new AuthZManager();
+const grants = await authz.queryGrants(keyData.address);
+console.log(grants);
+```

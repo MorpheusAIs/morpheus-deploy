@@ -1,0 +1,437 @@
+---
+title: Akash Client
+description: Deploy containers to Akash Network
+---
+
+# Akash Client
+
+The Akash Client handles all interactions with Akash Network for deploying, managing, and monitoring container workloads.
+
+## Overview
+
+The client manages the complete deployment lifecycle:
+
+1. **Create Deployment** - Submit workload specification
+2. **Wait for Bids** - Providers bid on your deployment
+3. **Create Lease** - Accept a provider's bid
+4. **Send Manifest** - Transmit container details to provider
+5. **Monitor** - Check status and service endpoints
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                       Akash Client                               │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                    Deployment Flow                         │ │
+│  │                                                            │ │
+│  │  Create ──▶ Bids ──▶ Lease ──▶ Manifest ──▶ Running       │ │
+│  │                                                            │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                              │                                   │
+│              ┌───────────────┼───────────────┐                  │
+│              ▼               ▼               ▼                  │
+│  ┌─────────────────┐ ┌─────────────┐ ┌─────────────────┐       │
+│  │   RPC Client    │ │  REST API   │ │ Provider API    │       │
+│  │  (Transactions) │ │  (Queries)  │ │ (Manifest/Logs) │       │
+│  └─────────────────┘ └─────────────┘ └─────────────────┘       │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Installation
+
+```typescript
+import { AkashClient } from '@morpheus-deploy/contracts';
+```
+
+## Connecting
+
+### Read-Only Connection
+
+```typescript
+const client = new AkashClient({
+  network: 'testnet', // or 'mainnet'
+});
+
+await client.connect();
+```
+
+### With Signing Capabilities
+
+```typescript
+const client = new AkashClient({ network: 'testnet' });
+await client.connectWithSigner(mnemonic);
+```
+
+## Deployment Operations
+
+### Create Deployment
+
+```typescript
+const { dseq, txHash } = await client.createDeployment({
+  owner: 'akash1your...',
+  sdl: sdlBytes, // Uint8Array of SDL hash
+  deposit: {
+    denom: 'uakt',
+    amount: '5000000', // 5 AKT
+  },
+});
+
+console.log(`Deployment created: DSEQ ${dseq}`);
+console.log(`Transaction: ${txHash}`);
+```
+
+### Wait for Bids
+
+After creating a deployment, providers will submit bids:
+
+```typescript
+const bids = await client.waitForBids(
+  owner,
+  dseq,
+  60000 // 60 second timeout
+);
+
+console.log(`Received ${bids.length} bids`);
+
+for (const bid of bids) {
+  console.log(`Provider: ${bid.id.provider}`);
+  console.log(`Price: ${bid.price.amount} uakt/block`);
+}
+```
+
+### Select Provider and Create Lease
+
+```typescript
+// Sort by price and select cheapest
+const sortedBids = bids.sort((a, b) => Number(a.price.amount) - Number(b.price.amount));
+
+const selectedProvider = sortedBids[0].id.provider;
+
+const { leaseId, txHash } = await client.createLease(owner, dseq, selectedProvider);
+
+console.log(`Lease created: ${leaseId}`);
+```
+
+### Send Manifest
+
+```typescript
+await client.sendManifest(
+  selectedProvider,
+  dseq,
+  manifest // JSON manifest object
+);
+```
+
+### Check Service Status
+
+```typescript
+const status = await client.getServiceStatus(provider, dseq);
+
+if (status.ready) {
+  console.log('Deployment is ready!');
+  for (const service of status.services) {
+    console.log(`Service: ${service.name}`);
+    console.log(`URLs: ${service.uris.join(', ')}`);
+  }
+}
+```
+
+## Query Operations
+
+### Get Deployment
+
+```typescript
+const deployment = await client.getDeployment(owner, dseq);
+
+if (deployment) {
+  console.log(`State: ${deployment.state}`);
+  console.log(`Groups: ${deployment.groups.length}`);
+}
+```
+
+### List Deployments
+
+```typescript
+const deployments = await client.listDeployments(owner);
+
+for (const deployment of deployments) {
+  console.log(`DSEQ: ${deployment.deployment_id.dseq}`);
+  console.log(`State: ${deployment.state}`);
+}
+```
+
+### Get Lease
+
+```typescript
+const lease = await client.getLease(
+  owner,
+  dseq,
+  1, // gseq (group sequence)
+  1, // oseq (order sequence)
+  provider
+);
+
+if (lease) {
+  console.log(`State: ${lease.state}`);
+  console.log(`Price: ${lease.price.amount} uakt/block`);
+}
+```
+
+### Get Escrow Account
+
+```typescript
+const escrow = await client.getEscrow(owner, dseq);
+
+if (escrow) {
+  console.log(`Balance: ${escrow.balance.amount} uakt`);
+  console.log(`Transferred: ${escrow.transferred.amount} uakt`);
+}
+```
+
+## Escrow Management
+
+### Deposit More Funds
+
+```typescript
+const txHash = await client.deposit(owner, dseq, {
+  denom: 'uakt',
+  amount: '5000000', // 5 AKT
+});
+```
+
+### Close Deployment
+
+```typescript
+const txHash = await client.closeDeployment(owner, dseq);
+console.log('Deployment closed, remaining funds returned');
+```
+
+## Provider Discovery
+
+### Get Provider Info
+
+```typescript
+const provider = await client.getProvider('akash1provider...');
+
+if (provider) {
+  console.log(`Host: ${provider.hostUri}`);
+  console.log(`Attributes:`);
+  for (const attr of provider.attributes) {
+    console.log(`  ${attr.key}: ${attr.value}`);
+  }
+}
+```
+
+### List Verified Providers
+
+```typescript
+const providers = await client.listVerifiedProviders();
+
+for (const provider of providers) {
+  console.log(`${provider.owner} - ${provider.hostUri}`);
+
+  // Check for GPU
+  const hasGpu = provider.attributes.some((a) => a.key === 'gpu');
+  if (hasGpu) console.log('  Has GPU');
+}
+```
+
+## API Reference
+
+### DeploymentConfig
+
+```typescript
+interface DeploymentConfig {
+  network: 'mainnet' | 'testnet';
+  rpcUrl?: string;
+}
+```
+
+### CreateDeploymentParams
+
+```typescript
+interface CreateDeploymentParams {
+  owner: string;
+  sdl: Uint8Array;
+  deposit: { denom: string; amount: string };
+}
+```
+
+### Methods
+
+| Method                                        | Description                |
+| --------------------------------------------- | -------------------------- |
+| `connect()`                                   | Connect read-only          |
+| `connectWithSigner(mnemonic)`                 | Connect with signing       |
+| `createDeployment(params)`                    | Create new deployment      |
+| `getDeployment(owner, dseq)`                  | Query deployment           |
+| `listDeployments(owner)`                      | List all deployments       |
+| `waitForBids(owner, dseq, timeout?)`          | Wait for provider bids     |
+| `createLease(owner, dseq, provider)`          | Accept bid, create lease   |
+| `getLease(owner, dseq, gseq, oseq, provider)` | Query lease                |
+| `sendManifest(provider, dseq, manifest)`      | Send manifest to provider  |
+| `getServiceStatus(provider, dseq)`            | Get running service status |
+| `getEscrow(owner, dseq)`                      | Query escrow balance       |
+| `deposit(owner, dseq, amount)`                | Add funds to escrow        |
+| `closeDeployment(owner, dseq)`                | Close and refund           |
+| `getProvider(address)`                        | Get provider info          |
+| `listVerifiedProviders()`                     | List audited providers     |
+
+## Network Configuration
+
+### Mainnet
+
+```typescript
+const MAINNET = {
+  rpcUrl: 'https://rpc.akashnet.net:443',
+  restUrl: 'https://api.akashnet.net',
+  chainId: 'akashnet-2',
+};
+```
+
+### Testnet (Sandbox)
+
+```typescript
+const TESTNET = {
+  rpcUrl: 'https://rpc.sandbox-01.akash.network:443',
+  restUrl: 'https://api.sandbox-01.akash.network',
+  chainId: 'sandbox-01',
+};
+```
+
+## Full Deployment Example
+
+```typescript
+import { AkashClient, AuthZManager } from '@morpheus-deploy/contracts';
+
+async function deploy(sdl: Uint8Array, manifest: object) {
+  const client = new AkashClient({ network: 'testnet' });
+  await client.connectWithSigner(mnemonic);
+
+  const owner = 'akash1owner...';
+
+  // 1. Create deployment
+  console.log('Creating deployment...');
+  const { dseq, txHash } = await client.createDeployment({
+    owner,
+    sdl,
+    deposit: { denom: 'uakt', amount: '5000000' },
+  });
+  console.log(`Created: DSEQ ${dseq}`);
+
+  // 2. Wait for bids
+  console.log('Waiting for bids...');
+  const bids = await client.waitForBids(owner, dseq, 60000);
+
+  if (bids.length === 0) {
+    throw new Error('No bids received');
+  }
+
+  // 3. Select cheapest provider
+  const selected = bids.sort((a, b) => Number(a.price.amount) - Number(b.price.amount))[0];
+
+  console.log(`Selected provider: ${selected.id.provider}`);
+
+  // 4. Create lease
+  console.log('Creating lease...');
+  await client.createLease(owner, dseq, selected.id.provider);
+
+  // 5. Send manifest
+  console.log('Sending manifest...');
+  await client.sendManifest(selected.id.provider, dseq, manifest);
+
+  // 6. Wait for ready
+  console.log('Waiting for deployment to be ready...');
+  let status;
+  for (let i = 0; i < 30; i++) {
+    await sleep(2000);
+    status = await client.getServiceStatus(selected.id.provider, dseq);
+    if (status.ready) break;
+  }
+
+  if (!status?.ready) {
+    throw new Error('Deployment failed to become ready');
+  }
+
+  console.log('Deployment ready!');
+  console.log(
+    'URLs:',
+    status.services.flatMap((s) => s.uris)
+  );
+
+  return { dseq, provider: selected.id.provider, urls: status.services };
+}
+```
+
+## Using with AuthZ
+
+When using ephemeral keys with AuthZ grants:
+
+```typescript
+import { AkashClient, AuthZManager, AkashMessages } from '@morpheus-deploy/contracts';
+
+async function deployWithAuthZ(ephemeralKey: EphemeralKeyData, granter: string, sdl: Uint8Array) {
+  const authz = new AuthZManager();
+  await authz.connect(ephemeralMnemonic);
+
+  // Create deployment message as granter
+  const msg = AkashMessages.createDeployment({
+    owner: granter, // Deployment owned by granter
+    dseq: generateDSEQ(),
+    version: sdl,
+    groups: [],
+    deposit: { denom: 'uakt', amount: '5000000' },
+  });
+
+  // Execute using AuthZ grant
+  const txHash = await authz.executeWithGrant(
+    ephemeralKey.address, // Signing as ephemeral key
+    granter, // On behalf of granter
+    [msg]
+  );
+
+  return txHash;
+}
+```
+
+## Error Handling
+
+```typescript
+try {
+  await client.createDeployment(params);
+} catch (error) {
+  if (error.message.includes('insufficient funds')) {
+    console.log('Not enough AKT for deposit');
+  } else if (error.message.includes('deployment already exists')) {
+    console.log('DSEQ collision, regenerate');
+  } else if (error.message.includes('no providers')) {
+    console.log('No providers match your requirements');
+  }
+}
+```
+
+## Monitoring Escrow
+
+```typescript
+async function monitorEscrow(owner: string, dseq: string) {
+  const client = new AkashClient({ network: 'testnet' });
+  await client.connect();
+
+  const escrow = await client.getEscrow(owner, dseq);
+  const balance = Number(escrow.balance.amount) / 1_000_000;
+
+  // Estimate time remaining (rough calculation)
+  const lease = await client.getLease(owner, dseq, 1, 1, provider);
+  const pricePerBlock = Number(lease.price.amount) / 1_000_000;
+  const blocksRemaining = balance / pricePerBlock;
+  const hoursRemaining = (blocksRemaining * 6) / 3600; // ~6s per block
+
+  console.log(`Balance: ${balance.toFixed(2)} AKT`);
+  console.log(`Estimated time: ${hoursRemaining.toFixed(1)} hours`);
+
+  if (hoursRemaining < 24) {
+    console.log('Warning: Deployment will run out of funds soon!');
+  }
+}
+```

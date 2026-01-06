@@ -1,0 +1,149 @@
+---
+title: API Overview
+description: HTTP API for programmatic deployments
+---
+
+# API Reference
+
+The Morpheus API enables programmatic deployments, making it easy to integrate with CI/CD pipelines, AI agents, and automation workflows.
+
+## Base URL
+
+```
+https://api.morpheus.network
+```
+
+For testnet:
+
+```
+https://api.testnet.morpheus.network
+```
+
+## Authentication Methods
+
+Morpheus supports three authentication methods:
+
+| Method                                                | Use Case            | Header                             |
+| ----------------------------------------------------- | ------------------- | ---------------------------------- |
+| [API Key](/docs/api/authentication#api-keys)          | Programmatic access | `Authorization: Bearer mor_sk_...` |
+| [SIWE](/docs/api/authentication#siwe)                 | Browser-based apps  | `Authorization: Bearer <jwt>`      |
+| [GitHub OAuth](/docs/api/authentication#github-oauth) | Repository access   | `Authorization: Bearer <jwt>`      |
+
+## Endpoints
+
+### Deployments
+
+| Method   | Endpoint                      | Description             |
+| -------- | ----------------------------- | ----------------------- |
+| `POST`   | `/api/deploy`                 | Create a new deployment |
+| `POST`   | `/api/deploy/preview`         | Get cost estimate       |
+| `GET`    | `/api/deployments`            | List deployments        |
+| `GET`    | `/api/deployments/:dseq`      | Get deployment status   |
+| `DELETE` | `/api/deployments/:dseq`      | Close deployment        |
+| `POST`   | `/api/deployments/:dseq/fund` | Add funds to escrow     |
+
+### API Keys
+
+| Method   | Endpoint        | Description    |
+| -------- | --------------- | -------------- |
+| `POST`   | `/api/keys`     | Create API key |
+| `GET`    | `/api/keys`     | List API keys  |
+| `DELETE` | `/api/keys/:id` | Revoke API key |
+
+### Deploy Button
+
+| Method | Endpoint               | Description         |
+| ------ | ---------------------- | ------------------- |
+| `GET`  | `/api/button`          | Get button SVG      |
+| `GET`  | `/api/button/redirect` | Handle button click |
+| `GET`  | `/api/button/embed`    | Get embed code      |
+| `GET`  | `/api/button/config`   | Get repo config     |
+
+### Webhooks
+
+| Method | Endpoint               | Description            |
+| ------ | ---------------------- | ---------------------- |
+| `POST` | `/api/webhooks/github` | GitHub webhook handler |
+
+## Request Format
+
+All POST requests use JSON:
+
+```bash
+curl -X POST https://api.morpheus.network/api/deploy \
+  -H "Authorization: Bearer mor_sk_abc123..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "repoUrl": "github.com/user/repo",
+    "template": "ai-agent"
+  }'
+```
+
+## Response Format
+
+All responses are JSON:
+
+```json
+{
+  "deploymentId": "dep_abc123",
+  "dseq": "12345678",
+  "status": "pending"
+}
+```
+
+## Error Format
+
+Errors follow a consistent structure:
+
+```json
+{
+  "error": {
+    "code": "INSUFFICIENT_FUNDS",
+    "message": "Wallet balance too low for deployment",
+    "details": {
+      "required": 50.0,
+      "available": 25.0
+    }
+  }
+}
+```
+
+## Error Codes
+
+| Code                 | HTTP Status | Description                       |
+| -------------------- | ----------- | --------------------------------- |
+| `UNAUTHORIZED`       | 401         | Invalid or missing authentication |
+| `FORBIDDEN`          | 403         | Insufficient permissions          |
+| `NOT_FOUND`          | 404         | Resource not found                |
+| `RATE_LIMITED`       | 429         | Rate limit exceeded               |
+| `INSUFFICIENT_FUNDS` | 402         | Wallet balance too low            |
+| `INVALID_CONFIG`     | 400         | Invalid deployment configuration  |
+| `DEPLOYMENT_FAILED`  | 500         | Deployment process failed         |
+
+## Rate Limits
+
+| Tier       | Deployments/Day | Requests/Minute |
+| ---------- | --------------- | --------------- |
+| Free       | 10              | 100             |
+| Pro        | 100             | 1000            |
+| Enterprise | Unlimited       | Unlimited       |
+
+Rate limit headers are included in responses:
+
+```
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1705312200
+```
+
+## Health Check
+
+```bash
+curl https://api.morpheus.network/health
+
+{
+  "status": "healthy",
+  "version": "0.1.0",
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```

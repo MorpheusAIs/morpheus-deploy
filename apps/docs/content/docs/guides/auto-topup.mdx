@@ -1,0 +1,445 @@
+---
+title: Auto Top-Up
+description: Configure automatic escrow replenishment
+---
+
+# Auto Top-Up Guide
+
+This guide explains how to configure Morpheus's Gas Station feature for automatic escrow replenishment, ensuring your deployments never run out of funds.
+
+## Overview
+
+The Gas Station monitors your Akash escrow balance and automatically tops it up when it falls below a threshold:
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                        Gas Station                                │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │                    Monitor Loop                            │  │
+│  │                                                            │  │
+│  │  Check Escrow ──▶ Below Threshold? ──▶ Trigger Top-Up     │  │
+│  │       │                   │                   │            │  │
+│  │       │                   │                   ▼            │  │
+│  │       │                   │         Cross-Chain Swap       │  │
+│  │       │                   │         USDC → AKT             │  │
+│  │       │                   │                   │            │  │
+│  │       │                   │                   ▼            │  │
+│  │       │                   │         Deposit to Escrow      │  │
+│  │       │                   │                                │  │
+│  │       └──────────◀────────┴───────────────────◀────────────┤  │
+│  │              (Loop every 5 minutes)                        │  │
+│  └────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+## Configuration
+
+### Basic Setup
+
+```yaml
+# morpheus.yaml
+funding:
+  source: smart-wallet
+  currency: USDC
+  initialDeposit: 50.00
+
+  autoTopUp:
+    enabled: true
+    threshold: 0.10 # Top up when 10% of initial deposit remains
+    amount: 25.00 # Add $25 each time
+```
+
+### Advanced Configuration
+
+```yaml
+funding:
+  autoTopUp:
+    enabled: true
+
+    # When to top up
+    threshold: 0.10 # Percentage of initial deposit
+    minBalance: 5.00 # Or when below $5 worth of AKT
+
+    # How much to add
+    amount: 25.00 # Amount per top-up
+    maxPerDay: 100.00 # Daily spending limit
+    maxPerWeek: 500.00 # Weekly spending limit
+
+    # Safety limits
+    maxConsecutive: 3 # Max top-ups without manual check
+    cooldownMinutes: 30 # Wait between top-ups
+
+    # Notifications
+    notify:
+      onTopUp: true
+      onLowBalance: true
+      email: alerts@example.com
+```
+
+## How It Works
+
+### 1. Monitoring
+
+The Gas Station checks your escrow balance every 5 minutes:
+
+```typescript
+// Example check
+const escrow = await client.getEscrow(owner, dseq);
+const balanceAkt = Number(escrow.balance.amount) / 1_000_000;
+
+// Check if below threshold
+const thresholdAkt = initialDeposit * threshold;
+if (balanceAkt < thresholdAkt) {
+  triggerTopUp();
+}
+```
+
+### 2. AuthZ Grant
+
+Auto top-up uses your existing AuthZ grant with a spend limit:
+
+```typescript
+// From AuthZManager
+const GAS_STATION_PERMISSION = {
+  msgType: '/cosmos.bank.v1beta1.MsgSend',
+  spendLimit: {
+    denom: 'uakt',
+    amount: '100000000', // 100 AKT max per operation
+  },
+};
+```
+
+### 3. Funding Flow
+
+When triggered:
+
+1. **Swap**: USDC → AKT via Skip Go
+2. **Deposit**: AKT sent to deployment escrow
+3. **Notify**: Alert sent (if configured)
+
+## Enabling Auto Top-Up
+
+### During Deployment
+
+```bash
+morpheus deploy --auto-topup
+
+# Output:
+# ✓ Auto top-up enabled
+#   Threshold: 10% (~5 AKT)
+#   Amount: $25 per top-up
+#   Max per day: $100
+```
+
+### After Deployment
+
+```bash
+morpheus autotopup enable --dseq 12345678
+
+# Configure settings
+morpheus autotopup configure \
+  --threshold 0.15 \
+  --amount 50 \
+  --max-daily 200
+```
+
+## Monitoring
+
+### Check Status
+
+```bash
+morpheus autotopup status
+
+# Output:
+# Auto Top-Up Status
+# ──────────────────
+#
+# Deployment: DSEQ 12345678
+# Status: Active
+#
+# Configuration:
+#   Threshold: 10% (~4.5 AKT)
+#   Top-up amount: $25 (~11 AKT)
+#   Max per day: $100
+#   Max per week: $500
+#
+# Current State:
+#   Escrow balance: 15.3 AKT (~$34)
+#   Threshold: 4.5 AKT
+#   Status: ✓ Healthy (3x above threshold)
+#
+# Recent Activity:
+#   Last top-up: 3 days ago
+#   Amount: $25 → 11.2 AKT
+#   Today's spend: $0 / $100
+#   Week's spend: $25 / $500
+```
+
+### View History
+
+```bash
+morpheus autotopup history
+
+# Output:
+# Auto Top-Up History
+# ───────────────────
+#
+# Date                 Amount      AKT      Trigger
+# ────────────────────────────────────────────────────
+# 2024-01-15 14:30    $25.00     11.2      Threshold (10%)
+# 2024-01-12 09:15    $25.00     10.8      Threshold (10%)
+# 2024-01-10 16:45    $25.00     11.5      Initial deploy
+#
+# Total: $75.00 → 33.5 AKT
+```
+
+## Safety Features
+
+### Spending Limits
+
+Prevent runaway spending:
+
+```yaml
+autoTopUp:
+  maxPerDay: 100.00 # Max $100/day
+  maxPerWeek: 500.00 # Max $500/week
+  maxPerMonth: 1000.00 # Max $1000/month
+```
+
+```bash
+# If limit reached:
+# ⚠ Daily limit reached ($100)
+# Auto top-up paused until tomorrow
+# Escrow may run out in ~6 hours
+```
+
+### Consecutive Top-Up Protection
+
+Detect potential issues:
+
+```yaml
+autoTopUp:
+  maxConsecutive: 3 # After 3 top-ups in a row, pause
+  cooldownMinutes: 30 # Minimum 30 min between top-ups
+```
+
+If too many consecutive top-ups occur, it indicates a potential problem:
+
+```
+⚠ Warning: 3 consecutive top-ups in 2 hours
+This may indicate:
+- Resource usage spike
+- Escrow drain attack
+- Configuration issue
+
+Auto top-up paused. Manual review required.
+
+Run: morpheus autotopup resume
+```
+
+### Wallet Balance Check
+
+Auto top-up verifies funds before attempting:
+
+```typescript
+// Check USDC balance before swap
+const balance = await wallet.getBalance('USDC');
+if (balance < topUpAmount) {
+  notify('Insufficient USDC for auto top-up');
+  return;
+}
+```
+
+## Notifications
+
+### Email Alerts
+
+```yaml
+autoTopUp:
+  notify:
+    email: alerts@example.com
+    onTopUp: true # Every top-up
+    onLowBalance: true # When below 2x threshold
+    onLimitReached: true # When hitting limits
+    onError: true # Failed top-ups
+```
+
+### Webhook Integration
+
+```yaml
+autoTopUp:
+  notify:
+    webhook: https://your-service.com/morpheus-webhook
+    events: ['topup', 'low_balance', 'error']
+```
+
+Webhook payload:
+
+```json
+{
+  "event": "topup",
+  "dseq": "12345678",
+  "amount": {
+    "usdc": "25.00",
+    "akt": "11.2"
+  },
+  "escrow": {
+    "before": "4.1",
+    "after": "15.3"
+  },
+  "timestamp": "2024-01-15T14:30:00Z"
+}
+```
+
+### Slack Integration
+
+```yaml
+autoTopUp:
+  notify:
+    slack:
+      webhook: https://hooks.slack.com/services/xxx
+      channel: '#infrastructure'
+```
+
+## Disabling Auto Top-Up
+
+### Temporarily
+
+```bash
+morpheus autotopup pause --dseq 12345678
+
+# Output:
+# ✓ Auto top-up paused
+#
+# Escrow balance: 15.3 AKT
+# Estimated runway: ~7 days
+#
+# Resume with: morpheus autotopup resume
+```
+
+### Permanently
+
+```bash
+morpheus autotopup disable --dseq 12345678
+
+# Also update morpheus.yaml:
+funding:
+  autoTopUp:
+    enabled: false
+```
+
+## Cost Estimation
+
+### Deployment Cost Factors
+
+| Factor  | Impact           |
+| ------- | ---------------- |
+| CPU     | ~$0.01/cpu/hour  |
+| Memory  | ~$0.005/GB/hour  |
+| Storage | ~$0.001/GB/hour  |
+| GPU     | ~$0.50-2.00/hour |
+
+### Estimating Monthly Costs
+
+```bash
+morpheus estimate --monthly
+
+# Output:
+# Monthly Cost Estimate
+# ────────────────────
+#
+# Resources:
+#   2 CPU: $14.40
+#   4GB Memory: $14.40
+#   10GB Storage: $7.20
+#   1x RTX 4090: $720.00
+#
+# Subtotal: $756.00/month
+#
+# Recommended auto top-up:
+#   Initial: $100
+#   Top-up amount: $50
+#   Threshold: 10%
+#   Estimated top-ups: ~15/month
+```
+
+### Optimizing Costs
+
+```yaml
+# Lower resource usage = fewer top-ups
+resources:
+  cpu: 1 # Reduced from 2
+  memory: 2Gi # Reduced from 4Gi
+
+# Higher threshold = less emergency top-ups
+autoTopUp:
+  threshold: 0.20 # Top up at 20% instead of 10%
+```
+
+## Troubleshooting
+
+### "Auto top-up failed"
+
+Check your wallet balance:
+
+```bash
+morpheus wallet balance
+
+# If low, add USDC:
+# Transfer USDC to your Smart Wallet address
+```
+
+### "AuthZ grant expired"
+
+Renew your AuthZ grant:
+
+```bash
+morpheus authz renew
+
+# Output:
+# Renewing AuthZ grant...
+# ✓ Grant extended for 30 days
+# ✓ Auto top-up permissions restored
+```
+
+### "Swap failed"
+
+Cross-chain swap issues:
+
+```bash
+# Check Skip Go status
+morpheus fund --status
+
+# Retry manually
+morpheus fund --amount 25 --dseq 12345678
+```
+
+### "Escrow deposit failed"
+
+Akash network issues:
+
+```bash
+# Check Akash network status
+morpheus network status
+
+# Retry deposit
+morpheus fund --retry --dseq 12345678
+```
+
+## CLI Reference
+
+| Command                        | Description          |
+| ------------------------------ | -------------------- |
+| `morpheus autotopup enable`    | Enable auto top-up   |
+| `morpheus autotopup disable`   | Disable auto top-up  |
+| `morpheus autotopup pause`     | Temporarily pause    |
+| `morpheus autotopup resume`    | Resume after pause   |
+| `morpheus autotopup status`    | Check current status |
+| `morpheus autotopup history`   | View top-up history  |
+| `morpheus autotopup configure` | Update settings      |
+
+## Next Steps
+
+- [GPU Deployments](/docs/guides/gpu-deployments) - Deploy AI workloads
+- [Cross-Chain Funding](/docs/guides/cross-chain-funding) - Manual funding
+- [Akash Client](/docs/contracts/akash-client) - Escrow management

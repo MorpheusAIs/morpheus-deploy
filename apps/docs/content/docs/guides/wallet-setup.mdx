@@ -1,0 +1,281 @@
+---
+title: Wallet Setup
+description: Set up your Smart Wallet with passkey authentication
+---
+
+# Wallet Setup Guide
+
+This guide walks you through setting up a Coinbase Smart Wallet for use with Morpheus. Smart Wallets provide a seedless, passkey-based authentication experience.
+
+## Prerequisites
+
+- A device with biometric authentication (Touch ID, Face ID, Windows Hello, or a hardware security key)
+- A modern browser (Chrome 67+, Safari 14+, Firefox 60+, Edge 79+)
+
+## Step 1: Initialize Your Project
+
+If you haven't already, initialize a Morpheus project:
+
+```bash
+morpheus init
+```
+
+During initialization, you'll be prompted to set up your wallet.
+
+## Step 2: Create Your Smart Wallet
+
+### Option A: Interactive Setup
+
+When prompted, select "Create new wallet":
+
+```
+? Wallet Setup
+  > Create new wallet
+    Import existing wallet
+    Connect hardware wallet
+```
+
+### Option B: CLI Command
+
+```bash
+morpheus wallet create
+```
+
+## Step 3: Authenticate with Passkey
+
+Your browser will prompt for biometric authentication:
+
+```
+┌────────────────────────────────────────┐
+│                                        │
+│   🔐 Create Passkey                    │
+│                                        │
+│   Morpheus Deploy wants to create      │
+│   a passkey for your account.          │
+│                                        │
+│   ┌────────────────────────────────┐   │
+│   │                                │   │
+│   │        [Touch ID Icon]         │   │
+│   │                                │   │
+│   │   Use Touch ID to continue     │   │
+│   │                                │   │
+│   └────────────────────────────────┘   │
+│                                        │
+│   [Cancel]              [Continue]     │
+│                                        │
+└────────────────────────────────────────┘
+```
+
+Touch your fingerprint sensor or use Face ID to authenticate.
+
+## Step 4: Verify Wallet Creation
+
+After successful authentication, you'll see your wallet details:
+
+```
+✓ Smart Wallet created successfully!
+
+  Address:   0x1a2B3c4D5e6F7890AbCdEf1234567890aBcDeF12
+  Network:   Base (Chain ID: 8453)
+  Type:      Coinbase Smart Wallet (ERC-4337)
+
+  Your wallet credentials are stored in:
+  ~/.morpheus/wallet.json
+
+  IMPORTANT: Back up your passkey! If you lose access to your
+  biometric device, you may lose access to this wallet.
+```
+
+## Step 5: Fund Your Wallet
+
+### On Testnet (Recommended for First-Time Users)
+
+1. Copy your wallet address
+2. Get testnet USDC from a faucet:
+   - [Base Sepolia Faucet](https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet)
+   - [USDC Testnet Faucet](https://faucet.circle.com/)
+
+```bash
+# Verify your balance
+morpheus wallet balance
+
+# Output:
+# Wallet: 0x1a2B3c4D5e6F...
+# Network: Base Sepolia (Testnet)
+#
+# Balances:
+#   ETH:  0.1
+#   USDC: 100.00
+```
+
+### On Mainnet
+
+Transfer USDC to your wallet address from:
+
+- Coinbase
+- Another wallet
+- A bridge from other chains
+
+## Step 6: Configure morpheus.yaml
+
+Your wallet is automatically configured in your project:
+
+```yaml
+# morpheus.yaml
+project:
+  name: my-agent
+
+funding:
+  source: smart-wallet
+  currency: USDC
+  # Your wallet address is stored in ~/.morpheus/wallet.json
+```
+
+## Backup and Recovery
+
+### Export Wallet Backup
+
+```bash
+morpheus wallet export --encrypted
+```
+
+This creates an encrypted backup of your wallet credentials.
+
+### Recovery Options
+
+1. **Same Device**: Passkey is synced via iCloud Keychain / Google Password Manager
+2. **New Device**: Import your encrypted backup:
+
+```bash
+morpheus wallet import backup.morpheus
+```
+
+3. **Hardware Key**: If you used a YubiKey, insert it on any device
+
+<Callout type="warn">
+  **Warning**: If you lose both your passkey AND your backup, you will lose access to your wallet
+  and any funds in it. Always maintain at least one backup.
+</Callout>
+
+## Multiple Wallets
+
+You can create and manage multiple wallets:
+
+```bash
+# Create additional wallet
+morpheus wallet create --name production
+
+# List wallets
+morpheus wallet list
+
+# Switch active wallet
+morpheus wallet use production
+
+# Output:
+# Available Wallets:
+#   * default    0x1a2B3c...  (active)
+#     production 0x9f8E7d...
+```
+
+## Security Best Practices
+
+### 1. Use Hardware Keys for Production
+
+For mainnet deployments with significant funds:
+
+```bash
+# Create wallet with YubiKey
+morpheus wallet create --hardware-key
+```
+
+### 2. Enable Multi-Factor
+
+Add a second authentication method:
+
+```bash
+morpheus wallet add-guardian --email security@yourcompany.com
+```
+
+### 3. Set Spending Limits
+
+Configure transaction limits in your wallet:
+
+```bash
+morpheus wallet set-limit --daily 1000 --single 100
+```
+
+### 4. Regular Backups
+
+Set up automated backup reminders:
+
+```bash
+# Add to your .bashrc or .zshrc
+alias morpheus-backup='morpheus wallet export --encrypted --output ~/backups/morpheus-$(date +%Y%m%d).backup'
+```
+
+## Troubleshooting
+
+### "Passkey not found"
+
+Your passkey may not have synced across devices:
+
+1. Check if passkey is available in your password manager
+2. Try authenticating on the original device
+3. Import from backup if available
+
+### "WebAuthn not supported"
+
+Update your browser or try a different one:
+
+- Chrome 67+
+- Safari 14+
+- Firefox 60+
+- Edge 79+
+
+### "Transaction failed"
+
+Ensure you have enough ETH for gas:
+
+```bash
+# Check ETH balance
+morpheus wallet balance
+
+# If low, add ETH for gas
+# Testnet: Use faucet
+# Mainnet: Transfer from exchange
+```
+
+### "Network mismatch"
+
+Ensure you're on the correct network:
+
+```bash
+# Check current network
+morpheus config get network
+
+# Switch networks
+morpheus config set network testnet
+# or
+morpheus config set network mainnet
+```
+
+## Wallet Commands Reference
+
+| Command                      | Description             |
+| ---------------------------- | ----------------------- |
+| `morpheus wallet create`     | Create new Smart Wallet |
+| `morpheus wallet import`     | Import existing wallet  |
+| `morpheus wallet export`     | Export wallet backup    |
+| `morpheus wallet balance`    | Check balances          |
+| `morpheus wallet list`       | List all wallets        |
+| `morpheus wallet use <name>` | Switch active wallet    |
+| `morpheus wallet address`    | Show wallet address     |
+| `morpheus wallet send`       | Send tokens             |
+
+## Next Steps
+
+Now that your wallet is set up:
+
+1. [Fund Your First Deployment](/docs/guides/cross-chain-funding)
+2. [Deploy Your First Agent](/docs/quickstart)
+3. [Set Up Auto Top-Up](/docs/guides/auto-topup)

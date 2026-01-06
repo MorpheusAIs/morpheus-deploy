@@ -1,0 +1,270 @@
+---
+title: Smart Wallet
+description: ERC-4337 account abstraction with passkey authentication
+---
+
+# Smart Wallet
+
+Morpheus uses Coinbase Smart Wallet for user authentication and fund management. This provides a seamless, passkey-based experience without requiring users to manage seed phrases.
+
+## Overview
+
+Smart Wallets are ERC-4337 compliant contract accounts that enable:
+
+- **Passkey Authentication** - Use Face ID, Touch ID, or security keys
+- **Gasless Transactions** - Bundlers can sponsor gas fees
+- **Batch Operations** - Multiple operations in a single transaction
+- **Recovery** - No single point of failure
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        User Device                           │
+│  ┌─────────────────┐    ┌────────────────────────────────┐  │
+│  │   Biometric     │───▶│        WebAuthn API            │  │
+│  │ (Touch/Face ID) │    │    (FIDO2 Authenticator)       │  │
+│  └─────────────────┘    └─────────────┬──────────────────┘  │
+└───────────────────────────────────────│──────────────────────┘
+                                        │
+                                        │ Signs Challenge
+                                        ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      Base Network                            │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │              Smart Wallet Contract (ERC-4337)           │ │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐  │ │
+│  │  │   Owner     │  │  Signature  │  │   Transaction   │  │ │
+│  │  │  Registry   │  │  Validator  │  │    Executor     │  │ │
+│  │  └─────────────┘  └─────────────┘  └─────────────────┘  │ │
+│  └─────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────┘
+```
+
+## Installation
+
+```typescript
+import { SmartWalletManager } from '@morpheus-deploy/contracts';
+```
+
+## Creating a Wallet
+
+### New Wallet
+
+```typescript
+const manager = new SmartWalletManager({
+  network: 'testnet', // or 'mainnet'
+});
+
+const wallet = await manager.createSmartWallet();
+
+console.log(wallet);
+// {
+//   address: '0x1234...abcd',
+//   chainId: 84532,
+//   isSmartWallet: true,
+//   ownerPrivateKey: '0x...' // STORE SECURELY!
+// }
+```
+
+<Callout type="warn">
+  The `ownerPrivateKey` is returned only once at creation. Store it securely - losing it means
+  losing access to the wallet.
+</Callout>
+
+### Existing Wallet
+
+```typescript
+const manager = new SmartWalletManager(
+  {
+    network: 'testnet',
+  },
+  ownerPrivateKey
+);
+
+const info = await manager.getWalletInfo(walletAddress);
+// { address, chainId, isSmartWallet: true }
+```
+
+## Checking Balances
+
+### ETH Balance
+
+```typescript
+const ethBalance = await manager.getBalance(walletAddress, 'ETH');
+console.log(`ETH: ${ethBalance / 10n ** 18n}`);
+```
+
+### USDC Balance
+
+```typescript
+const usdcBalance = await manager.getBalance(walletAddress, 'USDC');
+console.log(`USDC: ${usdcBalance / 10n ** 6n}`);
+```
+
+## Sending Transactions
+
+### Simple Transfer
+
+```typescript
+const txHash = await manager.sendTransaction({
+  to: recipientAddress,
+  data: '0x', // Empty for ETH transfer
+  value: parseEther('0.1'),
+});
+
+// Wait for confirmation
+const receipt = await manager.waitForTransaction(txHash);
+console.log(receipt);
+// { status: 'success', blockNumber: 12345n, gasUsed: 21000n }
+```
+
+### Token Approval
+
+```typescript
+const usdcAddress = '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
+const spender = '0x...'; // Contract that needs to spend tokens
+const amount = 100n * 10n ** 6n; // 100 USDC
+
+const txHash = await manager.approveToken(usdcAddress, spender, amount);
+await manager.waitForTransaction(txHash);
+```
+
+## Message Signing
+
+For SIWE (Sign-In with Ethereum) authentication:
+
+```typescript
+const message = `Sign in to Morpheus\nNonce: ${nonce}\nTimestamp: ${timestamp}`;
+const signature = await manager.signMessage(message);
+```
+
+## API Reference
+
+### SmartWalletConfig
+
+```typescript
+interface SmartWalletConfig {
+  network: 'mainnet' | 'testnet';
+  rpcUrl?: string; // Override default RPC
+}
+```
+
+### WalletInfo
+
+```typescript
+interface WalletInfo {
+  address: Address;
+  chainId: number;
+  isSmartWallet: boolean;
+  ownerPrivateKey?: `0x${string}`; // Only on creation
+}
+```
+
+### TransactionRequest
+
+```typescript
+interface TransactionRequest {
+  to: Address;
+  data: `0x${string}`;
+  value?: bigint;
+  gasLimit?: bigint;
+}
+```
+
+## Factory Addresses
+
+Smart Wallets are deployed via the Coinbase Smart Wallet Factory:
+
+| Network      | Factory Address                              |
+| ------------ | -------------------------------------------- |
+| Base Mainnet | `0x0BA5ED0c6AA8c49038F819E587E2633c4A9F428a` |
+| Base Sepolia | `0x0BA5ED0c6AA8c49038F819E587E2633c4A9F428a` |
+
+## Integration with Morpheus
+
+### During Init
+
+When you run `morpheus init`, the CLI:
+
+1. Prompts for passkey authentication
+2. Creates a Smart Wallet on Base
+3. Stores the wallet address in `morpheus.yaml`
+4. Securely stores owner credentials in `~/.morpheus/`
+
+### During Deploy
+
+The deployment flow uses the Smart Wallet to:
+
+1. Approve USDC spending for Skip Go swap
+2. Sign the cross-chain swap transaction
+3. Fund the ephemeral key for Akash operations
+
+## Security Considerations
+
+### Key Storage
+
+Owner private keys are encrypted at rest:
+
+```typescript
+// Keys are encrypted with machine-specific password
+// Stored in ~/.morpheus/wallet.json
+{
+  "address": "0x...",
+  "encryptedKey": "...",
+  "salt": "...",
+  "iv": "..."
+}
+```
+
+### Recovery
+
+For production deployments, consider:
+
+1. **Multi-sig** - Add multiple owners to the wallet
+2. **Social Recovery** - Use guardians for recovery
+3. **Hardware Keys** - Use YubiKey or similar for passkey
+
+### Testnet vs Mainnet
+
+Always test on Base Sepolia first:
+
+```typescript
+// Testnet - safe for development
+const manager = new SmartWalletManager({ network: 'testnet' });
+
+// Mainnet - real funds at risk
+const manager = new SmartWalletManager({ network: 'mainnet' });
+```
+
+## Common Issues
+
+### "Wallet not initialized"
+
+```typescript
+// Wrong: No private key provided
+const manager = new SmartWalletManager({ network: 'testnet' });
+await manager.sendTransaction(...); // Error!
+
+// Correct: Provide private key for signing
+const manager = new SmartWalletManager({ network: 'testnet' }, privateKey);
+await manager.sendTransaction(...); // Works!
+```
+
+### "Insufficient funds"
+
+Ensure the wallet has enough ETH for gas and the token balance for the operation:
+
+```bash
+# Check balances
+morpheus wallet balance
+```
+
+### CREATE2 Address Mismatch
+
+Smart Wallet addresses are deterministic based on owner and salt. If you're getting unexpected addresses:
+
+```typescript
+// Address is computed from owner + salt
+const address = await manager.computeSmartWalletAddress(factoryAddress, ownerAddress);
+```

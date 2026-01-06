@@ -1,0 +1,120 @@
+---
+title: morpheus logs
+description: Stream logs from your deployment
+---
+
+# morpheus logs
+
+Stream real-time logs from your deployed application.
+
+## Usage
+
+```bash
+morpheus logs [options] [dseq]
+```
+
+## Arguments
+
+| Argument | Description                                                         |
+| -------- | ------------------------------------------------------------------- |
+| `dseq`   | Deployment sequence number (optional, uses latest if not specified) |
+
+## Options
+
+| Option             | Description                                              |
+| ------------------ | -------------------------------------------------------- |
+| `--follow, -f`     | Follow log output (default: true)                        |
+| `--tail, -n`       | Number of lines to show from the end (default: 100)      |
+| `--service, -s`    | Filter by service name                                   |
+| `--since`          | Show logs since timestamp (e.g., "2024-01-15T10:00:00Z") |
+| `--timestamps, -t` | Show timestamps                                          |
+
+## Examples
+
+Stream logs from latest deployment:
+
+```bash
+morpheus logs
+```
+
+Stream logs from specific deployment:
+
+```bash
+morpheus logs 12345678
+```
+
+Show last 50 lines and follow:
+
+```bash
+morpheus logs -n 50 -f
+```
+
+Filter by service:
+
+```bash
+morpheus logs --service agent
+morpheus logs --service postgres
+```
+
+Show logs with timestamps:
+
+```bash
+morpheus logs --timestamps
+```
+
+Show logs since a specific time:
+
+```bash
+morpheus logs --since "2024-01-15T10:00:00Z"
+```
+
+## Output Format
+
+```
+[2024-01-15 10:30:15] agent    | Server starting on port 3000
+[2024-01-15 10:30:16] agent    | Connected to database
+[2024-01-15 10:30:17] agent    | Health check endpoint ready
+[2024-01-15 10:30:20] postgres | LOG:  database system is ready
+[2024-01-15 10:30:25] agent    | Received request: POST /api/chat
+```
+
+## Multi-Service Logs
+
+By default, logs from all services are interleaved. Use `--service` to filter:
+
+```bash
+# Only application logs
+morpheus logs --service agent
+
+# Only database logs
+morpheus logs --service postgres
+```
+
+## Log Levels
+
+Logs are color-coded by level:
+
+- **ERROR** - Red
+- **WARN** - Yellow
+- **INFO** - Default
+- **DEBUG** - Gray (only with --verbose)
+
+## Exiting
+
+Press `Ctrl+C` to stop following logs.
+
+## Pipe to File
+
+Save logs to a file:
+
+```bash
+morpheus logs --no-follow > deployment.log
+```
+
+## JSON Output
+
+For programmatic processing:
+
+```bash
+morpheus logs --json | jq '.message'
+```

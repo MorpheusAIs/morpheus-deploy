@@ -1,0 +1,159 @@
+---
+title: morpheus status
+description: Check the status of your deployment
+---
+
+# morpheus status
+
+Check the status of your deployment, including resource usage and escrow balance.
+
+## Usage
+
+```bash
+morpheus status [options] [dseq]
+```
+
+## Arguments
+
+| Argument | Description                                                         |
+| -------- | ------------------------------------------------------------------- |
+| `dseq`   | Deployment sequence number (optional, uses latest if not specified) |
+
+## Options
+
+| Option        | Description                            |
+| ------------- | -------------------------------------- |
+| `--json`      | Output as JSON                         |
+| `--watch, -w` | Continuously update status             |
+| `--interval`  | Watch interval in seconds (default: 5) |
+
+## Output
+
+```bash
+morpheus status
+
+Deployment: my-agent
+DSEQ: 12345678
+Status: Active
+
+URL: https://abc123.akash.network
+Provider: akash1provider...
+
+Resources:
+  CPU: 4 cores (2.3 used)
+  Memory: 8Gi (4.2Gi used)
+  Storage: 20Gi (8.5Gi used)
+  GPU: RTX 4090 x1
+
+Escrow:
+  Balance: 2.8 AKT (~$9.24)
+  Rate: 0.0015 AKT/block
+  Estimated Time Remaining: 23 days
+
+Services:
+  ✓ agent     Running    (healthy)
+  ✓ postgres  Running    (healthy)
+  ✓ vector    Running    (healthy)
+
+Created: 2024-01-15 10:30:00 UTC
+Uptime: 5 days, 3 hours
+```
+
+## Status Values
+
+| Status      | Description                    |
+| ----------- | ------------------------------ |
+| `Active`    | Deployment is running normally |
+| `Deploying` | Deployment is starting up      |
+| `Stopped`   | Deployment is stopped          |
+| `Failed`    | Deployment failed to start     |
+| `Closing`   | Deployment is being closed     |
+
+## Watch Mode
+
+Continuously monitor status:
+
+```bash
+morpheus status --watch
+
+# Update every 10 seconds
+morpheus status --watch --interval 10
+```
+
+Press `Ctrl+C` to stop watching.
+
+## JSON Output
+
+For scripting and automation:
+
+```bash
+morpheus status --json
+```
+
+```json
+{
+  "dseq": "12345678",
+  "status": "active",
+  "url": "https://abc123.akash.network",
+  "provider": "akash1provider...",
+  "resources": {
+    "cpu": { "allocated": 4, "used": 2.3 },
+    "memory": { "allocated": "8Gi", "used": "4.2Gi" },
+    "storage": { "allocated": "20Gi", "used": "8.5Gi" },
+    "gpu": { "model": "rtx4090", "count": 1 }
+  },
+  "escrow": {
+    "balance": "2.8",
+    "currency": "AKT",
+    "usdValue": 9.24,
+    "ratePerBlock": "0.0015",
+    "estimatedDaysRemaining": 23
+  },
+  "services": [
+    { "name": "agent", "status": "running", "healthy": true },
+    { "name": "postgres", "status": "running", "healthy": true },
+    { "name": "vector", "status": "running", "healthy": true }
+  ],
+  "createdAt": "2024-01-15T10:30:00Z",
+  "uptimeSeconds": 446580
+}
+```
+
+## List All Deployments
+
+See all your deployments:
+
+```bash
+morpheus status --all
+
+DSEQ        Name            Status    URL                         Created
+12345678    my-agent        Active    abc123.akash.network        5d ago
+12345679    mcp-server      Active    def456.akash.network        3d ago
+12345680    landing-page    Stopped   ghi789.akash.network        1w ago
+```
+
+## Examples
+
+Check latest deployment:
+
+```bash
+morpheus status
+```
+
+Check specific deployment:
+
+```bash
+morpheus status 12345678
+```
+
+Monitor in real-time:
+
+```bash
+morpheus status --watch
+```
+
+Get JSON for scripting:
+
+```bash
+morpheus status --json | jq '.escrow.estimatedDaysRemaining'
+```

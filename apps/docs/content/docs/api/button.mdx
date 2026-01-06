@@ -1,0 +1,313 @@
+---
+title: Deploy Button
+description: Add one-click deployment buttons to your repositories
+---
+
+# Deploy Button
+
+The "Deploy on Morpheus" button enables one-click deployments directly from your README or documentation. Similar to "Deploy to Vercel" or "Deploy to Heroku" buttons, it streamlines the deployment experience for your users.
+
+## Quick Start
+
+Add this to your README.md:
+
+```markdown
+[![Deploy on Morpheus](https://api.morpheus.network/api/button?repo=github.com/user/repo)](https://morpheus.network/deploy?repo=github.com/user/repo)
+```
+
+## Endpoints
+
+### Get Button SVG
+
+Returns an SVG image of the deploy button.
+
+```http
+GET /api/button
+```
+
+**Query Parameters:**
+
+| Parameter | Type   | Default   | Description                      |
+| --------- | ------ | --------- | -------------------------------- |
+| `repo`    | string | -         | Repository identifier            |
+| `style`   | string | `flat`    | Button style (`flat`, `rounded`) |
+| `color`   | string | `#14b8a6` | Accent color (hex)               |
+
+**Example:**
+
+```
+https://api.morpheus.network/api/button?repo=github.com/user/repo&color=%2314b8a6
+```
+
+**Response:**
+
+Returns `image/svg+xml` with appropriate caching headers.
+
+### Redirect Handler
+
+Redirects to the deployment wizard with pre-filled parameters.
+
+```http
+GET /api/button/redirect
+```
+
+**Query Parameters:**
+
+| Parameter  | Type   | Required | Description                  |
+| ---------- | ------ | -------- | ---------------------------- |
+| `repo`     | string | Yes      | Repository URL or identifier |
+| `template` | string | No       | Pre-select template          |
+| `branch`   | string | No       | Target branch                |
+
+**Example:**
+
+```
+https://api.morpheus.network/api/button/redirect?repo=github.com/user/repo&template=ai-agent&branch=main
+```
+
+**Response:**
+
+302 redirect to:
+
+```
+https://morpheus.network/deploy?repo=github.com/user/repo&template=ai-agent&branch=main
+```
+
+### Get Embed Code
+
+Returns ready-to-use embed code for the button.
+
+```http
+GET /api/button/embed
+```
+
+**Query Parameters:**
+
+| Parameter  | Type   | Required | Description                        |
+| ---------- | ------ | -------- | ---------------------------------- |
+| `repo`     | string | Yes      | Repository identifier              |
+| `template` | string | No       | Pre-select template                |
+| `format`   | string | No       | Output format (`markdown`, `html`) |
+
+**Markdown Response (default):**
+
+```markdown
+[![Deploy on Morpheus](https://api.morpheus.network/api/button?repo=github.com/user/repo)](https://morpheus.network/deploy?repo=github.com/user/repo)
+```
+
+**HTML Response:**
+
+```html
+<a href="https://morpheus.network/deploy?repo=github.com/user/repo">
+  <img
+    src="https://api.morpheus.network/api/button?repo=github.com/user/repo"
+    alt="Deploy on Morpheus"
+  />
+</a>
+```
+
+### Get Repository Config
+
+Analyzes a repository and returns suggested deployment configuration.
+
+```http
+GET /api/button/config
+```
+
+**Query Parameters:**
+
+| Parameter  | Type   | Required | Description                 |
+| ---------- | ------ | -------- | --------------------------- |
+| `repo`     | string | Yes      | Repository identifier       |
+| `template` | string | No       | Override template detection |
+
+**Response:**
+
+```json
+{
+  "repository": {
+    "name": "my-agent",
+    "fullName": "github.com/user/my-agent",
+    "defaultBranch": "main",
+    "language": "TypeScript"
+  },
+  "suggestedConfig": {
+    "template": "ai-agent",
+    "resources": {
+      "cpu": 2,
+      "memory": "4Gi",
+      "storage": "10Gi"
+    },
+    "envVars": ["API_KEY", "MODEL"]
+  },
+  "estimate": {
+    "setupTime": "~2 minutes",
+    "hourlyRate": 0.15,
+    "dailyRate": 3.6,
+    "monthlyRate": 108.0,
+    "currency": "USD"
+  }
+}
+```
+
+## Integration Examples
+
+### Basic README Button
+
+```markdown
+# My AI Agent
+
+An autonomous agent for task automation.
+
+## Deploy
+
+[![Deploy on Morpheus](https://api.morpheus.network/api/button?repo=github.com/user/my-agent)](https://morpheus.network/deploy?repo=github.com/user/my-agent)
+```
+
+### With Template Pre-selection
+
+```markdown
+[![Deploy on Morpheus](https://api.morpheus.network/api/button?repo=github.com/user/mcp-server)](https://morpheus.network/deploy?repo=github.com/user/mcp-server&template=mcp-server)
+```
+
+### HTML in Documentation Sites
+
+```html
+<div class="deploy-section">
+  <h2>Deploy Your Own</h2>
+  <a href="https://morpheus.network/deploy?repo=github.com/user/repo&template=ai-agent">
+    <img
+      src="https://api.morpheus.network/api/button?color=%2314b8a6"
+      alt="Deploy on Morpheus"
+      style="height: 32px;"
+    />
+  </a>
+</div>
+```
+
+### Custom Styled Button (React)
+
+```tsx
+import Image from 'next/image';
+
+export function DeployButton({ repo, template }: { repo: string; template?: string }) {
+  const deployUrl = new URL('https://morpheus.network/deploy');
+  deployUrl.searchParams.set('repo', repo);
+  if (template) deployUrl.searchParams.set('template', template);
+
+  const buttonUrl = new URL('https://api.morpheus.network/api/button');
+  buttonUrl.searchParams.set('repo', repo);
+
+  return (
+    <a href={deployUrl.toString()} target="_blank" rel="noopener noreferrer">
+      <Image src={buttonUrl.toString()} alt="Deploy on Morpheus" width={180} height={32} />
+    </a>
+  );
+}
+```
+
+### Docusaurus Integration
+
+```jsx
+// docs/getting-started.mdx
+import DeployButton from '@site/src/components/DeployButton';
+
+# Getting Started
+
+Deploy your own instance in one click:
+
+<DeployButton repo="github.com/user/repo" template="ai-agent" />
+```
+
+## Button Customization
+
+### Color Options
+
+The `color` parameter accepts any hex color:
+
+| Color          | Hex       | Preview URL                   |
+| -------------- | --------- | ----------------------------- |
+| Teal (default) | `#14b8a6` | `/api/button?color=%2314b8a6` |
+| Blue           | `#3b82f6` | `/api/button?color=%233b82f6` |
+| Purple         | `#8b5cf6` | `/api/button?color=%238b5cf6` |
+| Green          | `#22c55e` | `/api/button?color=%2322c55e` |
+| Orange         | `#f97316` | `/api/button?color=%23f97316` |
+
+<Callout>Remember to URL-encode the `#` as `%23` in query parameters.</Callout>
+
+### Dark Mode Support
+
+The button uses a dark gradient background that works well in both light and dark mode READMEs. The accent color is used for the border and play icon.
+
+## morpheus.yaml Auto-Detection
+
+When users click the deploy button, the wizard:
+
+1. Checks if `morpheus.yaml` exists in the repository root
+2. If found, pre-fills all configuration from the file
+3. If not found, suggests configuration based on repository analysis
+
+Include a `morpheus.yaml` for the best user experience:
+
+```yaml
+# morpheus.yaml
+project:
+  name: my-agent
+  version: 1.0.0
+
+template: ai-agent
+
+resources:
+  cpu: 2
+  memory: 4Gi
+  storage: 10Gi
+  gpu:
+    enabled: true
+    model: rtx4090
+
+env:
+  NODE_ENV: production
+  # Users will be prompted for these
+  ANTHROPIC_API_KEY: ''
+```
+
+## Best Practices
+
+### Position the Button Prominently
+
+Place the deploy button near the top of your README, after the project description:
+
+```markdown
+# Project Name
+
+Brief description of what this project does.
+
+[![Deploy on Morpheus](https://api.morpheus.network/api/button)](https://morpheus.network/deploy?repo=...)
+
+## Features
+
+...
+```
+
+### Include Required Environment Variables
+
+Document what environment variables users need:
+
+```markdown
+## Deploy
+
+[![Deploy on Morpheus](https://api.morpheus.network/api/button)](...)
+
+You'll need to provide:
+
+- `ANTHROPIC_API_KEY` - Your Anthropic API key
+- `DATABASE_URL` - (Auto-provided by Morpheus PostgreSQL sidecar)
+```
+
+### Link to Full Documentation
+
+```markdown
+[![Deploy on Morpheus](https://api.morpheus.network/api/button)](...)
+
+For manual deployment or advanced configuration, see our [deployment guide](./docs/deployment.md).
+```

@@ -1,0 +1,158 @@
+---
+title: Quick Start
+description: Deploy your first application to Akash Network in under 5 minutes
+---
+
+# Quick Start
+
+This guide will walk you through deploying your first application to Akash Network using Morpheus.
+
+## Step 1: Initialize Your Project
+
+In your project directory, run:
+
+```bash
+morpheus init
+```
+
+You'll be prompted to:
+
+1. **Select a template** - AI Agent, MCP Server, Website, or Custom
+2. **Configure resources** - CPU, memory, GPU (if needed)
+3. **Set up funding** - Initial deposit and auto-top-up preferences
+
+This creates a `morpheus.yaml` configuration file:
+
+```yaml
+project:
+  name: my-agent
+  version: 1.0.0
+
+template: ai-agent
+network: mainnet
+
+funding:
+  source: smart-wallet
+  currency: USDC
+  initialDeposit: 10.00
+  autoTopUp:
+    enabled: true
+    threshold: 0.10
+    amount: 5.00
+
+resources:
+  cpu: 2
+  memory: 4Gi
+  storage: 10Gi
+  gpu:
+    enabled: true
+    model: rtx4090
+    count: 1
+
+runtime:
+  replicas: 1
+  healthCheck:
+    path: /health
+    interval: 30s
+
+env:
+  NODE_ENV: production
+```
+
+## Step 2: Configure Environment Variables
+
+Add any secrets your application needs:
+
+```bash
+morpheus env set ANTHROPIC_API_KEY sk-ant-xxxxx
+morpheus env set DATABASE_URL postgresql://...
+```
+
+Secrets are automatically encrypted using ECIES and stored in your `morpheus.yaml`:
+
+```yaml
+env:
+  NODE_ENV: production
+  ANTHROPIC_API_KEY: sealed:v1:base64encodedciphertext...
+```
+
+## Step 3: Deploy
+
+Deploy your application with a single command:
+
+```bash
+morpheus deploy
+```
+
+Morpheus will:
+
+1. **Build** your Docker image locally
+2. **Push** to a container registry
+3. **Synthesize** an Akash SDL from your config
+4. **Swap** USDC to AKT via Skip Go
+5. **Broadcast** the deployment transaction
+6. **Wait** for provider bids
+7. **Create** a lease with the best provider
+8. **Send** your manifest
+9. **Verify** the deployment is healthy
+
+```
+Building container...
+Pushing to registry...
+Synthesizing SDL...
+Swapping 10 USDC → 3.2 AKT...
+Creating deployment...
+Waiting for bids... (3 received)
+Creating lease with provider akash1abc...
+Sending manifest...
+Deployment live!
+
+URL: https://abc123.akash.network
+DSEQ: 12345678
+```
+
+## Step 4: Monitor Your Deployment
+
+View real-time logs:
+
+```bash
+morpheus logs
+```
+
+Check deployment status:
+
+```bash
+morpheus status
+```
+
+```
+Deployment: my-agent (DSEQ: 12345678)
+Status: Active
+URL: https://abc123.akash.network
+Provider: akash1provider...
+
+Escrow Balance: 2.8 AKT (~$9.24)
+Estimated Time Remaining: 23 days
+
+Resources:
+  CPU: 2 cores
+  Memory: 4Gi
+  GPU: RTX 4090 x1
+```
+
+## Step 5: Fund Your Deployment
+
+When escrow runs low, add more funds:
+
+```bash
+morpheus fund --amount 10
+```
+
+Or enable auto-top-up in your `morpheus.yaml` to automatically refill when balance drops below the threshold.
+
+## Next Steps
+
+- [Templates](/docs/templates) - Learn about available deployment templates
+- [CLI Reference](/docs/cli) - Full command documentation
+- [Architecture](/docs/architecture) - How Morpheus works
+- [Smart Wallet Guide](/docs/guides/smart-wallet) - Deep dive into wallet management

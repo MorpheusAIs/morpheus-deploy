@@ -1,0 +1,101 @@
+---
+title: CLI Overview
+description: Complete reference for the Morpheus Deploy CLI
+---
+
+# CLI Reference
+
+The Morpheus CLI is the primary interface for deploying and managing applications on Akash Network.
+
+## Installation
+
+```bash
+npm install -g morpheus-deploy
+```
+
+## Commands
+
+| Command                      | Description                       |
+| ---------------------------- | --------------------------------- |
+| [`init`](/docs/cli/init)     | Initialize a new Morpheus project |
+| [`deploy`](/docs/cli/deploy) | Deploy your application           |
+| [`logs`](/docs/cli/logs)     | Stream deployment logs            |
+| [`status`](/docs/cli/status) | Check deployment status           |
+| [`fund`](/docs/cli/fund)     | Add funds to escrow               |
+| [`env`](/docs/cli/env)       | Manage environment variables      |
+
+## Global Options
+
+These options are available for all commands:
+
+```bash
+morpheus [command] [options]
+
+Options:
+  --config, -c    Path to morpheus.yaml (default: ./morpheus.yaml)
+  --network, -n   Network to use: mainnet | testnet (default: mainnet)
+  --verbose, -v   Enable verbose output
+  --quiet, -q     Suppress non-essential output
+  --help, -h      Show help
+  --version       Show version
+```
+
+## Configuration File
+
+The CLI reads configuration from `morpheus.yaml` in your project root:
+
+```yaml
+project:
+  name: my-agent
+  version: 1.0.0
+
+template: ai-agent
+network: mainnet
+
+funding:
+  source: smart-wallet
+  currency: USDC
+  initialDeposit: 10.00
+  autoTopUp:
+    enabled: true
+    threshold: 0.10
+    amount: 5.00
+
+resources:
+  cpu: 2
+  memory: 4Gi
+  storage: 10Gi
+  gpu:
+    enabled: false
+
+runtime:
+  replicas: 1
+  healthCheck:
+    path: /health
+    interval: 30s
+
+env:
+  NODE_ENV: production
+```
+
+## Authentication
+
+The CLI uses your Smart Wallet for authentication. On first use, you'll be prompted to create or connect a wallet:
+
+```bash
+morpheus init
+# Opens browser for passkey authentication
+```
+
+Your wallet configuration is stored at `~/.morpheus/wallet.json`.
+
+## Exit Codes
+
+| Code | Meaning              |
+| ---- | -------------------- |
+| 0    | Success              |
+| 1    | General error        |
+| 2    | Configuration error  |
+| 3    | Network/API error    |
+| 4    | Authentication error |
+| 5    | Deployment failed    |

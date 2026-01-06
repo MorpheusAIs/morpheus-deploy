@@ -1,0 +1,232 @@
+---
+title: Architecture
+description: How Morpheus Deploy works under the hood
+---
+
+# Architecture
+
+Morpheus Deploy is a comprehensive deployment platform that bridges traditional cloud development workflows with decentralized infrastructure.
+
+## System Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           Developer Machine                              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐    │
+│  │ morpheus.yaml│  │  Dockerfile │  │ Source Code │  │ Smart Wallet│    │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘    │
+│         └────────────────┴────────────────┴────────────────┘            │
+│                                   │                                      │
+│                          ┌────────▼────────┐                            │
+│                          │  Morpheus CLI   │                            │
+│                          └────────┬────────┘                            │
+└───────────────────────────────────│─────────────────────────────────────┘
+                                    │
+        ┌───────────────────────────┼───────────────────────────┐
+        │                           │                           │
+        ▼                           ▼                           ▼
+┌───────────────┐          ┌───────────────┐          ┌───────────────┐
+│  Base Network │          │  Skip Go API  │          │ Akash Network │
+│  (Chain 8453) │          │ Cross-Chain   │          │  (Cosmos SDK) │
+│               │          │    Swaps      │          │               │
+│ Smart Wallet  │───USDC──▶│               │───AKT───▶│  Deployment   │
+│ MOR Staking   │          │  Route Quote  │          │  Bid Matching │
+└───────────────┘          │  Execute Swap │          │  Lease Create │
+                           └───────────────┘          │  Manifest     │
+                                                      └───────┬───────┘
+                                                              │
+                                                              ▼
+                                                    ┌─────────────────┐
+                                                    │ Akash Provider  │
+                                                    │                 │
+                                                    │ ┌─────────────┐ │
+                                                    │ │   Agent     │ │
+                                                    │ │  Container  │ │
+                                                    │ └──────┬──────┘ │
+                                                    │        │        │
+                                                    │ ┌──────▼──────┐ │
+                                                    │ │  PostgreSQL │ │
+                                                    │ │   Sidecar   │ │
+                                                    │ └─────────────┘ │
+                                                    │ ┌─────────────┐ │
+                                                    │ │   Vector    │ │
+                                                    │ │   Sidecar   │ │
+                                                    │ └─────────────┘ │
+                                                    └─────────────────┘
+```
+
+## Core Components
+
+### Morpheus CLI (`apps/cli`)
+
+The command-line interface is the primary way developers interact with Morpheus. It handles:
+
+- Project initialization and configuration
+- Docker image building and pushing
+- Deployment orchestration
+- Log streaming and status monitoring
+- Escrow funding
+
+### Core Package (`packages/core`)
+
+The core business logic for Morpheus:
+
+| Module             | Description                               |
+| ------------------ | ----------------------------------------- |
+| `sdl/synthesizer`  | Transforms `morpheus.yaml` into Akash SDL |
+| `sdl/validator`    | Validates configuration and SDL           |
+| `sdl/secrets`      | ECIES encryption for sealed secrets       |
+| `build/engine`     | Docker image build orchestration          |
+| `build/detector`   | Framework detection (Node, Python, etc.)  |
+| `economic/engine`  | Cross-chain swap coordination             |
+| `economic/skip-go` | Skip Go API integration                   |
+| `economic/oracle`  | Price feed aggregation                    |
+
+### Contracts Package (`packages/contracts`)
+
+Blockchain integration layer:
+
+| Module                 | Description                      |
+| ---------------------- | -------------------------------- |
+| `wallet/smart-wallet`  | Coinbase Smart Wallet (ERC-4337) |
+| `wallet/ephemeral-key` | Time-limited deployment keys     |
+| `authz/manager`        | Cosmos AuthZ grant management    |
+| `staking/morpheus`     | MOR token staking                |
+| `akash/client`         | Akash deployment transactions    |
+| `akash/messages`       | Akash protobuf messages          |
+
+### Templates Package (`packages/templates`)
+
+Pre-configured deployment templates:
+
+- **AI Agent** - GPU-enabled containers with model serving
+- **MCP Server** - Model Context Protocol servers
+- **Website** - Static and dynamic web applications
+- **Custom** - Full configuration control
+
+### Adapters Package (`packages/adapters`)
+
+Durability and persistence:
+
+- PostgreSQL adapter for workflow state
+- Migration management
+- Connection pooling
+
+## Deployment Flow
+
+### 1. Configuration Parsing
+
+When you run `morpheus deploy`, the CLI first parses your `morpheus.yaml`:
+
+```typescript
+const config = await parseConfig('./morpheus.yaml');
+const validated = await SDLValidator.validate(config);
+```
+
+### 2. Docker Build
+
+The build engine creates a container image:
+
+```typescript
+const detector = new FrameworkDetector();
+const framework = await detector.detect('./');
+
+const builder = new BuildEngine();
+const image = await builder.build({
+  context: './',
+  framework,
+  template: config.template,
+});
+```
+
+### 3. SDL Synthesis
+
+Your configuration is transformed into an Akash SDL:
+
+```typescript
+const synthesizer = new SDLSynthesizer();
+const sdl = await synthesizer.synthesize({
+  config,
+  image,
+  sidecars: ['postgres', 'vector'],
+});
+```
+
+### 4. Cross-Chain Funding
+
+USDC on Base is swapped to AKT on Akash:
+
+```typescript
+const engine = new EconomicEngine();
+const { aktAmount, txHash } = await engine.swap({
+  amount: config.funding.initialDeposit,
+  sourceCurrency: 'USDC',
+  destinationCurrency: 'AKT',
+});
+```
+
+### 5. Akash Deployment
+
+The deployment is broadcast to Akash Network:
+
+```typescript
+const client = new AkashClient();
+const { dseq } = await client.createDeployment(sdl);
+
+const bids = await client.waitForBids(dseq);
+const lease = await client.createLease(dseq, bids[0]);
+
+await client.sendManifest(lease, sdl);
+```
+
+## Security Model
+
+### Smart Wallet (ERC-4337)
+
+Morpheus uses Coinbase Smart Wallet for authentication:
+
+- **No seed phrases** - Passkey-based authentication
+- **Account abstraction** - Gas sponsorship, batched transactions
+- **Biometric security** - Touch ID / Face ID
+
+### Ephemeral Keys
+
+For each deployment session, a time-limited key is generated:
+
+```typescript
+const ephemeral = await EphemeralKeyManager.generate({
+  permissions: [
+    '/akash.deployment.v1beta3.MsgCreateDeployment',
+    '/akash.deployment.v1beta3.MsgCloseDeployment',
+  ],
+  expiresIn: '24h',
+});
+```
+
+### Sealed Secrets
+
+Environment variables are encrypted with ECIES:
+
+```typescript
+const sealed = await SealedSecrets.encrypt('ANTHROPIC_API_KEY', 'sk-ant-xxxxx', publicKey);
+// => "sealed:v1:base64ciphertext..."
+```
+
+## Network Configuration
+
+| Network   | Base Chain           | Akash Chain | Use Case    |
+| --------- | -------------------- | ----------- | ----------- |
+| `mainnet` | Base (8453)          | akashnet-2  | Production  |
+| `testnet` | Base Sepolia (84532) | sandbox-01  | Development |
+
+### Token Addresses
+
+**Mainnet:**
+
+- USDC: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
+- MOR: TBD
+
+**Testnet (Base Sepolia):**
+
+- USDC: `0x036CbD53842c5426634e7929541eC2318f3dCF7e`
+- MOR: `0x5c80ddd187054e1e4abbffcd750498e81d34ffa3`
