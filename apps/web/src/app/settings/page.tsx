@@ -352,13 +352,15 @@ function GitHubTab() {
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             Connect your GitHub account to import repositories and enable automatic deployments.
           </p>
-          <button
-            onClick={() => setConnected(true)}
+          <Link
+            href="https://github.com/morpheus-deploy/morpheus-deploy"
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-xl bg-[#24292e] px-6 py-3 font-medium text-white hover:bg-[#374151] transition-colors"
           >
             <Github className="h-5 w-5" />
-            Connect GitHub
-          </button>
+            View on GitHub
+          </Link>
         </div>
       )}
     </div>

@@ -217,10 +217,15 @@ function RepoStep({
           </div>
         </div>
 
-        <button className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-8 py-4 text-lg font-medium hover:bg-muted transition-colors">
+        <Link
+          href="https://github.com/morpheus-deploy/morpheus-deploy"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-8 py-4 text-lg font-medium hover:bg-muted transition-colors"
+        >
           <Github className="h-5 w-5" />
-          Connect with GitHub
-        </button>
+          View on GitHub
+        </Link>
       </div>
     </div>
   );

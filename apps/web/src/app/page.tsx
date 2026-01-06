@@ -103,7 +103,7 @@ function HeroSection() {
             Deploy Now
           </Link>
           <Link
-            href="https://github.com/morpheus-deploy/morpheus-deploy"
+            href="https://github.com/morpheusais/morpheus-deploy"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-xl border border-border bg-card/50 px-8 py-4 text-lg font-medium hover:bg-card transition-colors"
@@ -333,7 +333,7 @@ function Footer() {
               Documentation
             </Link>
             <Link
-              href="https://github.com/morpheus-deploy"
+              href="https://github.com/morpheusais/morpheus-deploy"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-foreground transition-colors"
@@ -341,7 +341,7 @@ function Footer() {
               GitHub
             </Link>
             <Link
-              href="https://discord.gg/morpheusdeploy"
+              href="https://discord.gg/kyVaxTHnvB"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-foreground transition-colors"
@@ -349,12 +349,12 @@ function Footer() {
               Discord
             </Link>
             <Link
-              href="https://twitter.com/morpheusdeploy"
+              href="https://x.com/morpheusais"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-foreground transition-colors"
             >
-              Twitter
+              X
             </Link>
           </div>
         </div>
