@@ -1,5 +1,4 @@
 'use client';
-
 import {
   ArrowLeft,
   ArrowRight,
@@ -17,6 +16,7 @@ import {
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
+
 import { Footer } from '@/components/footer';
 
 type Step = 'connect' | 'repo' | 'config' | 'deploy';

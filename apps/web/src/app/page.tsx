@@ -1,5 +1,4 @@
 'use client';
-
 import {
   Wallet,
   Github,
@@ -12,6 +11,7 @@ import {
   Terminal,
 } from 'lucide-react';
 import Link from 'next/link';
+
 import { TerminalAnimation } from '@/components/terminal-animation';
 
 function Navbar() {

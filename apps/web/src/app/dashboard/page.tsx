@@ -1,5 +1,4 @@
 'use client';
-
 import {
   Activity,
   ChevronDown,
@@ -22,6 +21,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+
 import { Footer } from '@/components/footer';
 
 type DeploymentStatus = 'running' | 'deploying' | 'stopped' | 'failed';
