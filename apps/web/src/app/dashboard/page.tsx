@@ -1,8 +1,5 @@
 'use client';
 
-import Link from 'next/link';
-import { useState } from 'react';
-
 import {
   Activity,
   ChevronDown,
@@ -23,6 +20,8 @@ import {
   Wallet,
   Zap,
 } from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
 
 type DeploymentStatus = 'running' | 'deploying' | 'stopped' | 'failed';
 
