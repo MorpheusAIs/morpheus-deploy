@@ -41,7 +41,7 @@ Modern AI agents need **sovereign infrastructure**—compute that can't be shut 
 
 ```bash
 # Clone the repository
-git clone https://github.com/morpheus-deploy/morpheus-deploy.git
+git clone https://github.com/morpheusais/morpheus-deploy.git
 cd morpheus-deploy
 
 # Install dependencies
