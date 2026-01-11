@@ -1,20 +1,25 @@
 ---
 title: MOR Staking
-description: Stake MOR tokens for yield and platform benefits
+description: Stake MOR tokens using Builders V4 subnet infrastructure
 ---
 
 # MOR Staking
 
-Morpheus enables staking MOR tokens on Base network for yield generation. A portion of deployment funds is automatically staked to MOR, providing passive income for users.
+Morpheus enables staking MOR tokens on Base network using **Builders V4**, a subnet-based staking infrastructure. A portion of deployment funds is automatically staked to MOR, contributing to the Morpheus Deploy infrastructure subnet.
 
 ## Overview
 
-The staking system:
+The staking system uses Builders V4:
 
+- **Subnet-Based** - Deposits go to the Morpheus Deploy subnet
+- **Direct 1:1 Deposits** - No share conversion, direct MOR deposits
 - **Auto-stake** - 60% of deployment funds go to MOR staking
-- **Yield Generation** - Earn rewards on staked tokens
-- **Lock Period** - Tokens locked for configurable duration
-- **Compound** - Rewards can be auto-compounded
+- **Lock Period** - Configurable withdrawal lock period per subnet
+- **Production-Ready** - Audited contract system already deployed on Base
+
+<Callout type="info">
+  **Builders V4** is a proven, audited staking infrastructure already deployed on Base Mainnet and Base Sepolia. Unlike traditional share-based systems, it uses a subnet architecture where each project has an isolated staking pool.
+</Callout>
 
 ## Architecture
 
@@ -32,12 +37,13 @@ The staking system:
                               │
                               ▼
 ┌──────────────────────────────────────────────────────────────────┐
-│                    MOR Staking Contract                          │
+│              Builders V4 Registry Contract                       │
 │  ┌─────────────────────────────────────────────────────────────┐ │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │ │
-│  │  │   Stake     │  │   Shares    │  │     Rewards         │  │ │
-│  │  │  Position   │  │  Balance    │  │   Accumulator       │  │ │
-│  │  └─────────────┘  └─────────────┘  └─────────────────────┘  │ │
+│  │  Subnet: "Morpheus Deploy"                                   │ │
+│  │  ┌────────────────┐  ┌────────────────┐  ┌──────────────┐   │ │
+│  │  │ User Deposits  │  │  Lock Period   │  │   Subnet     │   │ │
+│  │  │   (1:1 MOR)    │  │ Configuration  │  │    Admin     │   │ │
+│  │  └────────────────┘  └────────────────┘  └──────────────┘   │ │
 │  └─────────────────────────────────────────────────────────────┘ │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -72,34 +78,32 @@ const result = await staking.stake(amount);
 console.log(result);
 // {
 //   txHash: '0xabc123...',
-//   shares: 95000000000000000000n, // Shares received
+//   shares: 100000000000000000000n,    // Amount deposited (1:1)
 //   morphAmount: 100000000000000000000n // MOR staked
 // }
 ```
 
 <Callout>
-  The stake function automatically approves the staking contract if needed. You don't need to call
-  approve separately.
+  The stake function automatically approves the staking contract if needed. You don't need to call approve separately.
+</Callout>
+
+<Callout type="warn">
+  In Builders V4, deposits are **1:1** with MOR tokens. The `shares` field in `StakeResult` contains the deposited amount for backward compatibility, but there is no share conversion.
 </Callout>
 
 ### Unstake MOR
 
 ```typescript
-// Unstake by shares (not MOR amount)
-const shares = 50n * 10n ** 18n;
-const txHash = await staking.unstake(shares);
+// Unstake by amount (not shares)
+const amount = 50n * 10n ** 18n; // 50 MOR
+const txHash = await staking.unstake(amount);
 
-// Check how much MOR you'll receive
-const morAmount = await staking.sharesToMOR(shares);
-console.log(`Will receive: ${morAmount / 10n ** 18n} MOR`);
+console.log(`Unstaked 50 MOR: ${txHash}`);
 ```
 
-### Claim Rewards
-
-```typescript
-const { txHash, amount } = await staking.claimRewards();
-console.log(`Claimed: ${amount / 10n ** 18n} MOR`);
-```
+<Callout type="warn">
+  Withdrawals may be subject to a lock period configured by the subnet. Check your position's `lockedUntil` field before attempting to unstake.
+</Callout>
 
 ## Reading Positions
 
@@ -110,32 +114,23 @@ const position = await staking.getPosition(walletAddress);
 
 console.log(position);
 // {
-//   amount: 100000000000000000000n,    // 100 MOR staked
-//   shares: 95000000000000000000n,     // 95 shares
-//   rewards: 5000000000000000000n,     // 5 MOR pending
-//   lockedUntil: Date('2024-02-15')    // Lock expiry
+//   amount: 100000000000000000000n,    // 100 MOR deposited
+//   shares: 100000000000000000000n,    // Same as amount (1:1)
+//   rewards: 0n,                       // Not tracked in Builders V4
+//   lockedUntil: Date('2024-03-15')    // Withdrawal lock expiry
 // }
 ```
+
+<Callout type="info">
+  **Note**: The `rewards` field is always `0n` in Builders V4. Rewards are managed externally by the subnet admin or through separate mechanisms.
+</Callout>
 
 ### Protocol Stats
 
 ```typescript
-// Total staked across all users
+// Total staked in the Morpheus Deploy subnet
 const totalStaked = await staking.getTotalStaked();
 console.log(`Total staked: ${totalStaked / 10n ** 18n} MOR`);
-
-// Current APY
-const apy = await staking.getAPY();
-console.log(`Current APY: ${apy}%`);
-```
-
-### Share Conversion
-
-```typescript
-// Convert shares to MOR
-const shares = 100n * 10n ** 18n;
-const morValue = await staking.sharesToMOR(shares);
-console.log(`${shares} shares = ${morValue} MOR`);
 ```
 
 ## API Reference
@@ -153,10 +148,10 @@ interface StakeConfig {
 
 ```typescript
 interface StakePosition {
-  amount: bigint; // MOR staked
-  shares: bigint; // Share balance
-  rewards: bigint; // Pending rewards
-  lockedUntil: Date; // Lock expiration
+  amount: bigint;     // MOR deposited to subnet
+  shares: bigint;     // Same as amount (1:1, for compatibility)
+  rewards: bigint;    // Always 0n in Builders V4
+  lockedUntil: Date;  // Withdrawal lock expiration
 }
 ```
 
@@ -165,33 +160,52 @@ interface StakePosition {
 ```typescript
 interface StakeResult {
   txHash: string;
-  shares: bigint;
-  morphAmount: bigint;
+  shares: bigint;      // Deposited amount (1:1, for compatibility)
+  morphAmount: bigint; // MOR deposited
 }
 ```
 
 ### Methods
 
-| Method                 | Description                     |
-| ---------------------- | ------------------------------- |
-| `stake(amount)`        | Stake MOR tokens                |
-| `unstake(shares)`      | Unstake by share amount         |
-| `claimRewards()`       | Claim pending rewards           |
-| `getPosition(address)` | Get staking position            |
-| `getTotalStaked()`     | Total MOR staked in protocol    |
-| `getAPY()`             | Current annual percentage yield |
-| `sharesToMOR(shares)`  | Convert shares to MOR value     |
+| Method                 | Description                                          |
+| ---------------------- | ---------------------------------------------------- |
+| `stake(amount)`        | Deposit MOR tokens to Morpheus Deploy subnet        |
+| `unstake(amount)`      | Withdraw MOR from subnet (subject to lock period)    |
+| `getPosition(address)` | Get staking position for address                     |
+| `getTotalStaked()`     | Total MOR deposited in Morpheus Deploy subnet        |
+| `sharesToMOR(amount)`  | Returns same value (1:1, for compatibility)          |
+
+### Deprecated Methods
+
+| Method           | Status      | Reason                                              |
+| ---------------- | ----------- | --------------------------------------------------- |
+| `claimRewards()` | **Removed** | Builders V4 doesn't support direct reward claiming  |
+| `getAPY()`       | **Removed** | APY must be calculated externally                   |
+
+<Callout type="error">
+  Calling `claimRewards()` or `getAPY()` will throw an error. These features are not available in Builders V4 and must be implemented externally if needed.
+</Callout>
 
 ## Contract Addresses
 
-| Network      | Staking Contract | MOR Token                                    |
-| ------------ | ---------------- | -------------------------------------------- |
-| Base Sepolia | `0x000...` (TBD) | `0x5c80ddd187054e1e4abbffcd750498e81d34ffa3` |
-| Base Mainnet | `0x000...` (TBD) | TBD                                          |
+### Base Sepolia (Testnet)
+
+| Component                | Address                                              |
+| ------------------------ | ---------------------------------------------------- |
+| Builders V4 Registry     | `0x6C3401D71CEd4b4fEFD1033EA5F83e9B3E7e4381`         |
+| Subnet ID                | `0xab4d64309bda15052e3e9133923a6b3d3b617bea4ab70a8d1bbebb3e94c1bf22` |
+| MOR Token                | `0x5c80ddd187054e1e4abbffcd750498e81d34ffa3`         |
+
+### Base Mainnet
+
+| Component                | Address                                              |
+| ------------------------ | ---------------------------------------------------- |
+| Builders V4 Registry     | `0x42bb446eae6dca7723a9ebdb81ea88afe77ef4b9`         |
+| Subnet ID                | `0x0000000000000000000000000000000000000000000000000000000000000000` (TBD) |
+| MOR Token                | TBD                                                  |
 
 <Callout type="warn">
-  Staking contract addresses are placeholders. The contracts need to be deployed before staking
-  functionality is available.
+  Mainnet subnet ID is not yet configured. Only testnet (Base Sepolia) is currently available.
 </Callout>
 
 ## Integration with Deployment Flow
@@ -215,7 +229,7 @@ funding:
 
 1. $100 USDC deposited
 2. $40 → Swapped to AKT for deployment
-3. $60 → Swapped to MOR and staked
+3. $60 → Swapped to MOR and deposited to Morpheus Deploy subnet
 
 ### Manual Staking
 
@@ -233,103 +247,53 @@ const staking = new MorpheusStaking({ network: 'testnet' }, privateKey);
 await staking.stake(amount);
 ```
 
-## Shares vs Amount
-
-The staking contract uses a share-based system:
-
-- **Amount** - Actual MOR tokens
-- **Shares** - Proportional ownership of the pool
-
-As rewards accrue, each share becomes worth more MOR:
-
-```
-Initial:  100 shares = 100 MOR (1:1)
-After:    100 shares = 105 MOR (rewards accrued)
-```
-
-This is why `unstake` takes shares, not MOR amount:
-
-```typescript
-// Wrong approach (common mistake)
-const morToUnstake = 50n * 10n ** 18n;
-await staking.unstake(morToUnstake); // This is shares, not MOR!
-
-// Correct approach
-const position = await staking.getPosition(address);
-const sharesToUnstake = position.shares / 2n; // Half of shares
-await staking.unstake(sharesToUnstake);
-```
-
 ## Lock Periods
 
-Staked tokens may have a lock period:
+Staked tokens are subject to withdrawal lock periods configured by the subnet:
 
 ```typescript
 const position = await staking.getPosition(address);
 
 if (position.lockedUntil > new Date()) {
-  console.log(`Locked until ${position.lockedUntil}`);
+  const lockTimeRemaining = position.lockedUntil.getTime() - Date.now();
+  const daysLocked = Math.ceil(lockTimeRemaining / (1000 * 60 * 60 * 24));
+  console.log(`Locked for ${daysLocked} more days`);
   console.log('Cannot unstake yet');
 } else {
   // Safe to unstake
-  await staking.unstake(position.shares);
+  await staking.unstake(position.amount);
 }
 ```
 
-## Yield Strategies
+## Migration from Previous System
 
-### Basic Staking
+### What Changed
 
-Just stake and periodically claim rewards:
+If you're familiar with share-based staking systems, here are the key differences in Builders V4:
+
+| Aspect     | Traditional Staking | Builders V4 (Current)                         |
+| ---------- | ------------------- | --------------------------------------------- |
+| Deposits   | Share-based         | Direct 1:1 MOR deposits                       |
+| Rewards    | Built-in tracking   | Managed externally by subnet admin            |
+| APY        | Contract provides   | Must be calculated externally                 |
+| Claiming   | `claimRewards()`    | Not available                                 |
+| Unstaking  | By shares           | By amount (1:1)                               |
+| Subnet     | N/A                 | Isolated per-project pool                     |
+
+### API Compatibility
+
+The `MorpheusStaking` class maintains backward compatibility:
 
 ```typescript
-// Stake
+// These still work
 await staking.stake(amount);
-
-// Periodically claim
-setInterval(
-  async () => {
-    const position = await staking.getPosition(address);
-    if (position.rewards > minRewardThreshold) {
-      await staking.claimRewards();
-    }
-  },
-  24 * 60 * 60 * 1000
-); // Daily
-```
-
-### Compound Strategy
-
-Claim and re-stake rewards for compound growth:
-
-```typescript
-async function compound() {
-  const { amount: rewards } = await staking.claimRewards();
-  if (rewards > 0n) {
-    await staking.stake(rewards);
-    console.log(`Compounded ${rewards / 10n ** 18n} MOR`);
-  }
-}
-```
-
-### Partial Unstaking
-
-Unstake only rewards, keep principal:
-
-```typescript
+await staking.unstake(amount);
 const position = await staking.getPosition(address);
+const total = await staking.getTotalStaked();
 
-// Calculate shares representing only rewards
-const principalMor = initialStakeAmount;
-const currentMor = await staking.sharesToMOR(position.shares);
-const rewardsMor = currentMor - principalMor;
-
-if (rewardsMor > 0n) {
-  // Calculate shares to unstake for just rewards
-  // This requires inverse calculation
-  const rewardShares = (position.shares * rewardsMor) / currentMor;
-  await staking.unstake(rewardShares);
-}
+// These throw errors (not available in Builders V4)
+await staking.claimRewards(); // ❌ Error
+const apy = await staking.getAPY(); // ❌ Error
 ```
 
 ## Error Handling
@@ -344,7 +308,17 @@ try {
     console.log('Not enough MOR tokens');
   } else if (error.message.includes('allowance')) {
     console.log('Token approval failed');
-  } else if (error.message.includes('locked')) {
+  } else if (error.message.includes('minimal deposit')) {
+    console.log('Amount below subnet minimum deposit');
+  }
+}
+
+try {
+  await staking.unstake(amount);
+} catch (error) {
+  if (error.message.includes('insufficient deposit')) {
+    console.log('Trying to withdraw more than deposited');
+  } else if (error.message.includes('lock')) {
     console.log('Tokens are still locked');
   }
 }
@@ -364,4 +338,64 @@ const position = await staking.getPosition(address);
 if (position.lockedUntil > new Date()) {
   throw new Error(`Tokens locked until ${position.lockedUntil}`);
 }
+
+// Check available balance
+if (position.amount < amount) {
+  throw new Error(`Insufficient deposit: have ${position.amount}, need ${amount}`);
+}
 ```
+
+## Advanced Topics
+
+### Understanding Subnet Architecture
+
+Builders V4 uses a subnet model where each project has an isolated staking pool:
+
+- **Subnet ID**: 32-byte identifier for the Morpheus Deploy subnet
+- **Subnet Config**: Lock periods, minimum deposits, admin address
+- **Isolated Pools**: Each subnet's deposits are separate
+- **Subnet Admin**: Can configure parameters and manage the subnet
+
+```typescript
+// All operations are scoped to the Morpheus Deploy subnet
+// The subnet ID is automatically included in all contract calls
+await staking.stake(amount); // → deposit(MORPHEUS_SUBNET_ID, amount)
+```
+
+### Direct Contract Interaction
+
+For advanced users who want to bypass the SDK:
+
+```typescript
+import { createWalletClient, http } from 'viem';
+import { baseSepolia } from 'viem/chains';
+import { STAKING_ABI, STAKING_ADDRESS, SUBNET_ID } from '@morpheus-deploy/contracts/staking/abi';
+
+const client = createWalletClient({
+  chain: baseSepolia,
+  transport: http(),
+});
+
+// Direct deposit
+await client.writeContract({
+  address: STAKING_ADDRESS.testnet,
+  abi: STAKING_ABI,
+  functionName: 'deposit',
+  args: [SUBNET_ID.testnet, amount],
+});
+
+// Check user deposit
+const deposit = await client.readContract({
+  address: STAKING_ADDRESS.testnet,
+  abi: STAKING_ABI,
+  functionName: 'getUserDeposit',
+  args: [SUBNET_ID.testnet, userAddress],
+});
+```
+
+## References
+
+- [Builders V4 on Base Sepolia](https://sepolia.basescan.org/address/0x6C3401D71CEd4b4fEFD1033EA5F83e9B3E7e4381)
+- [Subnet Creation Transaction](https://sepolia.basescan.org/tx/0xe10bc2b48e024bac539f303a020abb68f34a8f4ab57cd8b68edf258cc70e366d)
+- [Example Deposit Transaction](https://sepolia.basescan.org/tx/0xaafea377f2f8cddc4778fc9305aaca0489aab5360aa2b29db60646e4374b73cc)
+- [Migration Documentation](/docs/STAKING_BUILDERS_V4.md)
