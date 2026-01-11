@@ -1,9 +1,11 @@
 import { generatePrivateKey, privateKeyToAccount, type PrivateKeyAccount } from 'viem/accounts';
-import { readFile, writeFile, mkdir } from 'fs/promises';
+import { readFile, writeFile, mkdir, chmod } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
-import { homedir } from 'os';
+import { homedir, platform } from 'os';
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'crypto';
+import { getKeychainManager, type KeychainManager } from '../security/keychain.js';
+import { getSecurityLogger } from '../security/logger.js';
 
 export interface EphemeralKeyConfig {
   storageDir?: string;
@@ -27,21 +29,27 @@ export class EphemeralKeyManager {
   private expirationMs: number;
   private keyData: EphemeralKeyData | null = null;
   private account: PrivateKeyAccount | null = null;
+  private keychainManager: KeychainManager;
 
   constructor(config: EphemeralKeyConfig = {}) {
     this.storageDir = config.storageDir || join(homedir(), '.morpheus');
     this.expirationMs = (config.expirationHours || 24) * 60 * 60 * 1000;
+    this.keychainManager = getKeychainManager({ storageDir: this.storageDir });
   }
 
   /**
    * Generate a new ephemeral key
+   *
+   * Security: Uses secure keychain for encryption password storage
+   * Addresses audit finding C-1
    */
   async generate(permissions: string[]): Promise<EphemeralKeyData> {
+    const logger = getSecurityLogger();
     const privateKey = generatePrivateKey();
     const account = privateKeyToAccount(privateKey);
 
-    // Encrypt the private key for storage
-    const password = await this.getEncryptionPassword();
+    // Get encryption password from secure keychain (fixes C-1)
+    const { password, source } = await this.keychainManager.getOrCreatePassword();
     const { encrypted, salt, iv } = this.encryptKey(privateKey, password);
 
     const now = new Date();
@@ -63,13 +71,25 @@ export class EphemeralKeyManager {
     // Save to storage
     await this.save();
 
+    // Log security event (addresses L-3)
+    await logger.info('EPHEMERAL_KEY_GENERATED', {
+      address: account.address,
+      permissions,
+      expiresAt: expiresAt.toISOString(),
+      passwordSource: source,
+    });
+
     return this.keyData;
   }
 
   /**
    * Load existing ephemeral key
+   *
+   * Security: Uses secure keychain for encryption password retrieval
+   * Addresses audit finding C-1
    */
   async load(): Promise<EphemeralKeyData | null> {
+    const logger = getSecurityLogger();
     const keyPath = join(this.storageDir, 'ephemeral-key.json');
 
     if (!existsSync(keyPath)) {
@@ -86,8 +106,8 @@ export class EphemeralKeyManager {
         return null;
       }
 
-      // Decrypt and load account
-      const password = await this.getEncryptionPassword();
+      // Get encryption password from secure keychain (fixes C-1)
+      const { password } = await this.keychainManager.getOrCreatePassword();
       const privateKey = this.decryptKey(
         this.keyData.encryptedPrivateKey,
         this.keyData.salt,
@@ -97,8 +117,19 @@ export class EphemeralKeyManager {
 
       this.account = privateKeyToAccount(privateKey as `0x${string}`);
 
+      // Log security event (addresses L-3)
+      await logger.info('EPHEMERAL_KEY_LOADED', {
+        address: this.keyData.address,
+        expiresAt: this.keyData.expiresAt,
+        permissions: this.keyData.permissions,
+      });
+
       return this.keyData;
-    } catch {
+    } catch (error) {
+      await logger.error('EPHEMERAL_KEY_LOADED', {
+        error: 'Failed to load ephemeral key',
+        details: String(error),
+      });
       return null;
     }
   }
@@ -144,17 +175,32 @@ export class EphemeralKeyManager {
 
   /**
    * Revoke the ephemeral key
+   *
+   * Security: Also cleans up keychain password storage
+   * Addresses audit finding C-1
    */
   async revoke(): Promise<void> {
+    const logger = getSecurityLogger();
     const keyPath = join(this.storageDir, 'ephemeral-key.json');
+    const revokedAddress = this.keyData?.address;
 
     if (existsSync(keyPath)) {
       const { unlink } = await import('fs/promises');
       await unlink(keyPath);
     }
 
+    // Clean up keychain password (fixes C-1)
+    await this.keychainManager.deletePassword();
+
     this.keyData = null;
     this.account = null;
+
+    // Log security event (addresses L-3)
+    if (revokedAddress) {
+      await logger.info('EPHEMERAL_KEY_REVOKED', {
+        address: revokedAddress,
+      });
+    }
   }
 
   /**
@@ -185,11 +231,18 @@ export class EphemeralKeyManager {
     if (!this.keyData) return;
 
     if (!existsSync(this.storageDir)) {
-      await mkdir(this.storageDir, { recursive: true });
+      await mkdir(this.storageDir, { recursive: true, mode: 0o700 });
     }
 
     const keyPath = join(this.storageDir, 'ephemeral-key.json');
-    await writeFile(keyPath, JSON.stringify(this.keyData, null, 2));
+
+    // Write with restrictive permissions (L-4 fix)
+    await writeFile(keyPath, JSON.stringify(this.keyData, null, 2), { mode: 0o600 });
+
+    // Ensure permissions are set correctly on Unix systems
+    if (platform() !== 'win32') {
+      await chmod(keyPath, 0o600);
+    }
   }
 
   private encryptKey(
@@ -231,10 +284,6 @@ export class EphemeralKeyManager {
     return decrypted;
   }
 
-  private async getEncryptionPassword(): Promise<string> {
-    // In production, use system keychain (keytar)
-    // For now, derive from machine ID
-    const { hostname, platform, arch } = await import('os');
-    return `morpheus-${hostname()}-${platform()}-${arch()}`;
-  }
+  // NOTE: getEncryptionPassword() removed - was using insecure machine-ID derivation
+  // Now using secure KeychainManager (see C-1 audit fix)
 }
