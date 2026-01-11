@@ -17,6 +17,9 @@ importers:
       '@typescript-eslint/parser':
         specifier: ^7.0.0
         version: 7.18.0(eslint@8.57.1)(typescript@5.9.3)
+      dotenv:
+        specifier: ^16.3.0
+        version: 16.6.1
       eslint:
         specifier: ^8.57.0
         version: 8.57.1
@@ -29,12 +32,18 @@ importers:
       prettier:
         specifier: ^3.1.0
         version: 3.7.4
+      tsx:
+        specifier: ^4.19.0
+        version: 4.21.0
       turbo:
         specifier: ^2.0.0
         version: 2.7.2
       typescript:
         specifier: ^5.3.0
         version: 5.9.3
+      viem:
+        specifier: ^2.44.1
+        version: 2.44.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76)
       vitest:
         specifier: ^1.6.0
         version: 1.6.1(@types/node@20.19.27)
@@ -535,8 +544,8 @@ packages:
   '@chain-registry/types@0.50.281':
     resolution: {integrity: sha512-EQ/TGvOYFvkqZVvOkFiO4uZ3JSHqEKplwc7Y8s4wHjQMb1tiog0ABKLYmd23B2IlajZN3IV2X6flkgjIZSPbqw==}
 
-  '@chain-registry/types@2.0.132':
-    resolution: {integrity: sha512-nECRFq/uFxWmoXhbeaRqDpO3gL8lo1R2xrgWEsnB8V0weF9tsIm9wsWI9HU50gKYk52WOXX5tqDdb5wvhDPniQ==}
+  '@chain-registry/types@2.0.135':
+    resolution: {integrity: sha512-fXTIxRqNlumaXSjFmcDBfyXi3bvlc6DnPXLdPt8aRHDTCjSgk0K061pmWy+GfkQPUerwD9UO4Yrfv1OEBmGiCg==}
 
   '@coinbase/cdp-sdk@1.40.1':
     resolution: {integrity: sha512-VZxAUYvWbqM4gw/ZHyr9fKBlCAKdMbBQzJxpV9rMUNkdulHIrj0cko2Mw3dyVyw+gdT62jAVxzVkPuQTRnECLw==}
@@ -3759,8 +3768,8 @@ packages:
   chain-registry@1.69.444:
     resolution: {integrity: sha512-t9RQlok+Wv0my4Joko9WgwT7CWaAKdXzE40uApbzXuRX0tsG5fbzv1zugsiLIDDrOOemqTQYDG27f+ZrXuMbfA==}
 
-  chain-registry@2.0.132:
-    resolution: {integrity: sha512-y1Jo/I5NgBfh7nZ+nSFEQtWhpTHZtg4g2GmmO/2BrHuupW4fVhPKuuAjJnO4sdRfPS2hF1VvThnWVeZSO+k01g==}
+  chain-registry@2.0.135:
+    resolution: {integrity: sha512-kN0lYR9bmQTv0ZvpYexiB7gfhzxFG6dt3F23mcPcebKly7pa+iSGMynUjpY1mQl11CVm/3RYTlZuDixocMojqA==}
 
   chalk@2.4.2:
     resolution: {integrity: sha512-Mti+f9lpJNcwF4tWV8/OrTTtF1gZi+f8FqlyAdouralcFWFQWF2+NgCHShjkCb+IFBLq9buZwE1xckQU4peSuQ==}
@@ -5913,6 +5922,14 @@ packages:
       typescript:
         optional: true
 
+  ox@0.11.3:
+    resolution: {integrity: sha512-1bWYGk/xZel3xro3l8WGg6eq4YEKlaqvyMtVhfMFpbJzK2F6rj4EDRtqDCWVEJMkzcmEi9uW2QxsqELokOlarw==}
+    peerDependencies:
+      typescript: '>=5.4.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   ox@0.6.7:
     resolution: {integrity: sha512-17Gk/eFsFRAZ80p5eKqv89a57uXjd3NgIf1CaXojATPBuujVc/fQSVhBeAU9JCRB+k7J50WQAyWTxK19T9GgbA==}
     peerDependencies:
@@ -7373,6 +7390,14 @@ packages:
       typescript:
         optional: true
 
+  viem@2.44.1:
+    resolution: {integrity: sha512-wfQda7PIJeF9hWiGKV628AfBwyYxyoc89OcgF4s4/chs2PY8ibUA7IG+DWdU4oAkjhHm9w47w1m2dwwOPBU+ng==}
+    peerDependencies:
+      typescript: '>=5.0.4'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   vite-node@1.6.1:
     resolution: {integrity: sha512-YAXkfvGtuTzwWbDSACdJSg4A4DZiAqckWe90Zapc/sEX3XvHcw1NdurM/6od8J207tSDqNbSsgdCacBgvJKFuA==}
     engines: {node: ^18.0.0 || >=20.0.0}
@@ -7887,7 +7912,7 @@ snapshots:
 
   '@chain-registry/types@0.50.281': {}
 
-  '@chain-registry/types@2.0.132': {}
+  '@chain-registry/types@2.0.135': {}
 
   '@coinbase/cdp-sdk@1.40.1(bufferutil@4.1.0)(fastestsmallesttextencoderdecoder@1.0.22)(typescript@5.9.3)(utf-8-validate@5.0.10)(ws@8.18.0(bufferutil@4.1.0)(utf-8-validate@5.0.10))':
     dependencies:
@@ -10600,7 +10625,7 @@ snapshots:
       '@solana/wallet-adapter-base': 0.9.27(@solana/web3.js@1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10))
       '@solana/web3.js': 1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       axios: 1.13.2
-      chain-registry: 2.0.132
+      chain-registry: 2.0.135
       cosmjs-types: 0.8.0
       keccak256: 1.0.6
       kujira.js: 0.9.162(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -12400,9 +12425,9 @@ snapshots:
     dependencies:
       '@chain-registry/types': 0.50.281
 
-  chain-registry@2.0.132:
+  chain-registry@2.0.135:
     dependencies:
-      '@chain-registry/types': 2.0.132
+      '@chain-registry/types': 2.0.135
 
   chalk@2.4.2:
     dependencies:
@@ -15193,6 +15218,21 @@ snapshots:
     transitivePeerDependencies:
       - zod
 
+  ox@0.11.3(typescript@5.9.3)(zod@3.25.76):
+    dependencies:
+      '@adraffy/ens-normalize': 1.11.1
+      '@noble/ciphers': 1.3.0
+      '@noble/curves': 1.9.1
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.2.3(typescript@5.9.3)(zod@3.25.76)
+      eventemitter3: 5.0.1
+    optionalDependencies:
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - zod
+
   ox@0.6.7(typescript@5.9.3)(zod@4.3.5):
     dependencies:
       '@adraffy/ens-normalize': 1.11.1
@@ -16834,6 +16874,23 @@ snapshots:
       abitype: 1.2.3(typescript@5.9.3)(zod@4.3.5)
       isows: 1.0.7(ws@8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       ox: 0.11.1(typescript@5.9.3)(zod@4.3.5)
+      ws: 8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+    optionalDependencies:
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+      - zod
+
+  viem@2.44.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@3.25.76):
+    dependencies:
+      '@noble/curves': 1.9.1
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.2.3(typescript@5.9.3)(zod@3.25.76)
+      isows: 1.0.7(ws@8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+      ox: 0.11.3(typescript@5.9.3)(zod@3.25.76)
       ws: 8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     optionalDependencies:
       typescript: 5.9.3
