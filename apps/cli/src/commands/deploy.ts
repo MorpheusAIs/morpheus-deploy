@@ -8,6 +8,9 @@ import { DeploymentManager } from '../lib/deployment.js';
 import { SDLSynthesizer } from '@morpheus-deploy/core';
 import { BuildEngine } from '@morpheus-deploy/core';
 import { EconomicEngine } from '@morpheus-deploy/core';
+import { parseDuration, formatDuration } from '@morpheus-deploy/core';
+
+const DEFAULT_DURATION = '1y';
 
 interface DeployOptions {
   template?: string;
@@ -15,6 +18,7 @@ interface DeployOptions {
   repo?: string;
   testnet?: boolean;
   yes?: boolean;
+  duration?: string;
 }
 
 export async function deployCommand(options: DeployOptions): Promise<void> {
@@ -83,15 +87,27 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
     });
     spinner.succeed('SDL manifest generated');
 
+    const durationStr = options.duration || config.funding?.duration || DEFAULT_DURATION;
+    const durationHours = parseDuration(durationStr);
+    const totalUpfrontCost = sdl.estimatedCost * durationHours;
+
     // Display deployment summary
     console.log(chalk.dim('\n  Deployment Summary:'));
     console.log(chalk.dim(`  - Template: ${config.template}`));
-    console.log(chalk.dim(`  - Resources: ${config.resources?.cpu || 2} CPU, ${config.resources?.memory || '4Gi'} RAM`));
+    console.log(
+      chalk.dim(
+        `  - Resources: ${config.resources?.cpu || 2} CPU, ${config.resources?.memory || '4Gi'} RAM`
+      )
+    );
     if (sdl.gpu) {
       console.log(chalk.dim(`  - GPU: ${sdl.gpu.model} x${sdl.gpu.units}`));
     }
     console.log(chalk.dim(`  - Network: ${options.testnet ? 'Sandbox (Testnet)' : 'Mainnet'}`));
-    console.log(chalk.dim(`  - Estimated cost: ~$${sdl.estimatedCost}/hour\n`));
+    console.log(chalk.dim(`  - Estimated cost: ~$${sdl.estimatedCost}/hour`));
+    console.log(chalk.dim(`  - Duration: ${formatDuration(durationHours)}`));
+    console.log(
+      chalk.bold.yellow(`  - Total Upfront Funding: ~$${totalUpfrontCost.toFixed(2)} USDC\n`)
+    );
 
     // Confirm deployment
     if (!options.yes) {
@@ -109,15 +125,16 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
       }
     }
 
-    // Execute economic swap
     spinner.start('Executing cross-chain swap (USDC -> AKT)...');
     const economicEngine = new EconomicEngine(config, walletManager);
     const swapResult = await economicEngine.executeSwap({
       sourceToken: config.funding?.sourceToken || 'USDC',
-      amount: sdl.estimatedCost * 24 * 7, // Fund for 1 week
+      amount: totalUpfrontCost,
       destination: 'akash',
     });
-    spinner.succeed(`Swapped: ${swapResult.sourceAmount} USDC -> ${swapResult.destinationAmount} AKT`);
+    spinner.succeed(
+      `Swapped: ${swapResult.sourceAmount} USDC -> ${swapResult.destinationAmount} AKT`
+    );
 
     // Deploy to Akash
     spinner.start('Broadcasting deployment to Akash...');
@@ -158,11 +175,12 @@ export async function deployCommand(options: DeployOptions): Promise<void> {
     console.log(`  ${chalk.bold('Lease ID:')}    ${lease.id}`);
     console.log();
     console.log(chalk.dim(`  View logs:   ${chalk.cyan(`morpheus logs -d ${deployment.dseq}`)}`));
-    console.log(chalk.dim(`  Check status: ${chalk.cyan(`morpheus status -d ${deployment.dseq}`)}\n`));
+    console.log(
+      chalk.dim(`  Check status: ${chalk.cyan(`morpheus status -d ${deployment.dseq}`)}\n`)
+    );
 
     // Save deployment state
     await deploymentManager.saveState(deployment, lease, serviceUrl);
-
   } catch (error) {
     spinner.fail('Deployment failed');
     console.error(chalk.red('\nError:'), error instanceof Error ? error.message : error);

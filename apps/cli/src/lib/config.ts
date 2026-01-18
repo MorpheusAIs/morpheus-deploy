@@ -10,6 +10,7 @@ export interface MorpheusConfig {
     sourceToken: string;
     autoTopUp: boolean;
     threshold: number;
+    duration?: string;
     split: {
       staking: number;
       compute: number;
@@ -83,6 +84,7 @@ interface GenerateConfigOptions {
     sourceToken: string;
     autoTopUp: boolean;
     threshold: number;
+    duration?: string;
     split: { staking: number; compute: number };
   };
 }
@@ -96,6 +98,7 @@ export function generateMorpheusConfig(options: GenerateConfigOptions): string {
       sourceToken: options.funding.sourceToken,
       autoTopUp: options.funding.autoTopUp,
       threshold: options.funding.threshold,
+      duration: options.funding.duration || '1y',
       split: options.funding.split,
     },
     resources: {
@@ -132,6 +135,7 @@ funding:
   sourceToken: "${config.funding!.sourceToken}"
   autoTopUp: ${config.funding!.autoTopUp}
   threshold: ${config.funding!.threshold}
+  duration: "${config.funding!.duration}"  # 1y (1 year), 6m (6 months), 30d (30 days)
   split:
     staking: ${config.funding!.split.staking}  # 60% to MOR staking
     compute: ${config.funding!.split.compute}  # 40% to AKT compute

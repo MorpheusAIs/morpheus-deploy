@@ -12,3 +12,6 @@ export { FrameworkDetector } from './build/detector.js';
 export { EconomicEngine, type SwapConfig, type SwapResult } from './economic/engine.js';
 export { SkipGoClient } from './economic/skip-go.js';
 export { PriceOracle } from './economic/oracle.js';
+
+// Utilities
+export { parseDuration, formatDuration } from './utils/duration.js';

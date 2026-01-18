@@ -19,11 +19,14 @@ program
 program
   .command('init')
   .description('Initialize a new Morpheus project')
-  .option('-t, --template <type>', 'Template type: ai-agent, mcp-server, website, custom', 'ai-agent')
+  .option(
+    '-t, --template <type>',
+    'Template type: ai-agent, mcp-server, website, custom',
+    'ai-agent'
+  )
   .option('--skip-wallet', 'Skip wallet setup')
   .action(initCommand);
 
-// morpheus deploy - Deploy to Akash
 program
   .command('deploy')
   .description('Deploy your application to decentralized infrastructure')
@@ -32,6 +35,7 @@ program
   .option('--repo <url>', 'Deploy from a remote GitHub repository')
   .option('--testnet', 'Deploy to Akash Sandbox/Testnet')
   .option('-y, --yes', 'Skip confirmation prompts')
+  .option('-d, --duration <period>', 'Funding duration: 1y (default), 6m, 30d, etc.', '1y')
   .action(deployCommand);
 
 // morpheus logs - Stream logs from deployment

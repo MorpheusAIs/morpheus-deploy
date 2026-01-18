@@ -14,6 +14,13 @@ export interface FundingConfig {
   sourceToken: string;
   autoTopUp: boolean;
   threshold: number;
+  /**
+   * Duration for initial deployment funding.
+   * Supports: y (years), m (months), w (weeks), d (days)
+   * Examples: "1y", "6m", "30d"
+   * Default: "1y" (1 year)
+   */
+  duration?: string;
   split: {
     staking: number;
     compute: number;

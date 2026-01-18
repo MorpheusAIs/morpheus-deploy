@@ -9,6 +9,7 @@ vi.mock('@morpheus-deploy/core', () => ({
       profiles: {},
       deployment: {},
       raw: 'version: "2.0"',
+      estimatedCost: 0.05,
     }),
   })),
   BuildEngine: vi.fn().mockImplementation(() => ({
@@ -31,6 +32,29 @@ vi.mock('@morpheus-deploy/core', () => ({
       swapAmount: 4,
     }),
   })),
+  parseDuration: vi.fn((str: string) => {
+    const match = str.match(/^(\d+)(y|m|w|d)$/);
+    if (!match) throw new Error(`Invalid duration: ${str}`);
+    const [, val, unit] = match;
+    const value = parseInt(val, 10);
+    switch (unit) {
+      case 'y':
+        return value * 365 * 24;
+      case 'm':
+        return value * 30 * 24;
+      case 'w':
+        return value * 7 * 24;
+      case 'd':
+        return value * 24;
+      default:
+        return 0;
+    }
+  }),
+  formatDuration: vi.fn((hours: number) => {
+    if (hours >= 365 * 24) return `${hours / (365 * 24)} year(s)`;
+    if (hours >= 30 * 24) return `${hours / (30 * 24)} month(s)`;
+    return `${hours / 24} day(s)`;
+  }),
 }));
 
 vi.mock('@morpheus-deploy/contracts', () => ({
@@ -46,9 +70,7 @@ vi.mock('@morpheus-deploy/contracts', () => ({
       dseq: '12345',
       txHash: 'ABC123',
     }),
-    waitForBids: vi.fn().mockResolvedValue([
-      { provider: 'akash1provider', price: '1000' },
-    ]),
+    waitForBids: vi.fn().mockResolvedValue([{ provider: 'akash1provider', price: '1000' }]),
     createLease: vi.fn().mockResolvedValue({
       leaseId: 'lease-123',
       txHash: 'DEF456',
@@ -208,6 +230,39 @@ describe('Command Options', () => {
       };
 
       expect(options.network).toBe('testnet');
+    });
+
+    it('should accept --duration option with years', () => {
+      const options = {
+        duration: '1y',
+      };
+
+      expect(options.duration).toBe('1y');
+    });
+
+    it('should accept --duration option with months', () => {
+      const options = {
+        duration: '6m',
+      };
+
+      expect(options.duration).toBe('6m');
+    });
+
+    it('should accept --duration option with days', () => {
+      const options = {
+        duration: '30d',
+      };
+
+      expect(options.duration).toBe('30d');
+    });
+
+    it('should default duration to 1 year when not specified', () => {
+      const options = {
+        duration: undefined,
+      };
+
+      const effectiveDuration = options.duration || '1y';
+      expect(effectiveDuration).toBe('1y');
     });
   });
 

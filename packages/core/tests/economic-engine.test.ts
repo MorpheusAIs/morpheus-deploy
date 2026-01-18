@@ -9,7 +9,10 @@ vi.mock('../src/economic/skip-go', () => ({
     getRoute: vi.fn().mockResolvedValue({
       estimatedOutput: '2450000',
       estimatedFee: '10000',
-      route: [{ from: 'base', to: 'osmosis' }, { from: 'osmosis', to: 'akash' }],
+      route: [
+        { from: 'base', to: 'osmosis' },
+        { from: 'osmosis', to: 'akash' },
+      ],
       priceImpact: 0.01,
       estimatedTime: 120,
       sourceChain: 'base',
@@ -147,6 +150,45 @@ describe('EconomicEngine', () => {
       expect(typeof funding.akt).toBe('number');
       expect(typeof funding.usdc).toBe('number');
       expect(funding.akt).toBeGreaterThan(0);
+    });
+
+    it('should calculate 1 year funding correctly with default buffer', async () => {
+      const hourlyRate = 0.5;
+      const oneYearHours = 365 * 24;
+      const defaultBuffer = 0.2;
+
+      const funding = await engine.calculateRequiredFunding(hourlyRate, oneYearHours);
+
+      expect(funding.akt).toBe(hourlyRate * oneYearHours * (1 + defaultBuffer));
+    });
+
+    it('should calculate 6 month funding correctly with default buffer', async () => {
+      const hourlyRate = 0.5;
+      const sixMonthHours = 6 * 30 * 24;
+      const defaultBuffer = 0.2;
+
+      const funding = await engine.calculateRequiredFunding(hourlyRate, sixMonthHours);
+
+      expect(funding.akt).toBe(hourlyRate * sixMonthHours * (1 + defaultBuffer));
+    });
+
+    it('should calculate 30 day funding correctly with default buffer', async () => {
+      const hourlyRate = 0.5;
+      const thirtyDayHours = 30 * 24;
+      const defaultBuffer = 0.2;
+
+      const funding = await engine.calculateRequiredFunding(hourlyRate, thirtyDayHours);
+
+      expect(funding.akt).toBe(hourlyRate * thirtyDayHours * (1 + defaultBuffer));
+    });
+
+    it('should calculate funding without buffer when specified', async () => {
+      const hourlyRate = 0.5;
+      const oneYearHours = 365 * 24;
+
+      const funding = await engine.calculateRequiredFunding(hourlyRate, oneYearHours, 0);
+
+      expect(funding.akt).toBe(hourlyRate * oneYearHours);
     });
   });
 

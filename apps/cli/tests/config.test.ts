@@ -213,6 +213,43 @@ describe('generateMorpheusConfig', () => {
     expect(yaml).toContain('staking: 0.7');
   });
 
+  it('should include duration in funding configuration', () => {
+    const options = {
+      projectName: 'duration-project',
+      template: 'ai-agent',
+      funding: {
+        sourceToken: 'USDC',
+        autoTopUp: true,
+        threshold: 0.1,
+        duration: '1y',
+        split: { staking: 0.6, compute: 0.4 },
+      },
+    };
+
+    const yaml = generateMorpheusConfig(options);
+
+    expect(yaml).toContain('funding:');
+    expect(yaml).toContain('duration: "1y"');
+  });
+
+  it('should support 6 month duration', () => {
+    const options = {
+      projectName: 'short-duration-project',
+      template: 'ai-agent',
+      funding: {
+        sourceToken: 'USDC',
+        autoTopUp: false,
+        threshold: 0.1,
+        duration: '6m',
+        split: { staking: 0.6, compute: 0.4 },
+      },
+    };
+
+    const yaml = generateMorpheusConfig(options);
+
+    expect(yaml).toContain('duration: "6m"');
+  });
+
   it('should include comments and documentation', () => {
     const options = {
       projectName: 'documented-project',
