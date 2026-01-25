@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
-import { TerminalAnimation } from '@/components/terminal-animation';
+import { HeroVideo } from '@/components/hero-video';
 
 function Navbar() {
   return (
@@ -120,7 +120,7 @@ function HeroSection() {
           </Link>
         </div>
 
-        <TerminalAnimation />
+        <HeroVideo />
       </div>
     </section>
   );
